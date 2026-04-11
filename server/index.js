@@ -48,6 +48,14 @@ function authMiddleware(req, res, next) {
   }
 }
 
+function optionalAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header) { req.user = null; return next(); }
+  const token = header.replace('Bearer ', '');
+  try { req.user = jwt.verify(token, JWT_SECRET); } catch { req.user = null; }
+  next();
+}
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 
 app.post('/api/auth/signup', async (req, res) => {
@@ -112,6 +120,20 @@ app.put('/api/auth/link-profile', authMiddleware, async (req, res) => {
   try {
     const { profile_id } = req.body;
     await pool.query('UPDATE users SET profile_id = $1 WHERE id = $2', [profile_id, req.user.userId]);
+
+    // If mentor/both role, auto-create a mentors directory entry linked to this user
+    const { rows: pRows } = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [profile_id]);
+    const p = pRows[0];
+    if (p && (p.role === 'mentor' || p.role === 'both')) {
+      const existing = await pool.query('SELECT id FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
+      if (!existing.rows.length) {
+        await pool.query(
+          `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, is_img, avatar_grad, photo, linked_user_id, match_score, years_exp, mentees_count, sessions_count)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,0,0,0)`,
+          [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield || '', p.institution || '', p.state || '', p.bio || '', p.tags || [], p.is_img, p.avatar_grad || '', p.photo || '', req.user.userId]
+        );
+      }
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -284,13 +306,14 @@ app.delete('/api/profiles/:id', async (req, res) => {
 
 // ── CONNECTIONS ───────────────────────────────────────────────────────────────
 
-app.post('/api/connections', async (req, res) => {
+app.post('/api/connections', optionalAuth, async (req, res) => {
   try {
     const { user_profile_id, mentor_id } = req.body;
+    const userId = req.user?.userId || null;
     const { rows } = await pool.query(
-      `INSERT INTO connections (user_profile_id, mentor_id) VALUES ($1,$2)
+      `INSERT INTO connections (user_profile_id, mentor_id, user_id, status) VALUES ($1,$2,$3,'pending')
        ON CONFLICT DO NOTHING RETURNING *`,
-      [user_profile_id, mentor_id]
+      [user_profile_id, mentor_id, userId]
     );
     await pool.query('UPDATE mentors SET mentees_count = mentees_count + 1 WHERE id = $1', [mentor_id]);
 
@@ -325,6 +348,36 @@ app.post('/api/connections', async (req, res) => {
   }
 });
 
+app.get('/api/connections/mine', authMiddleware, async (req, res) => {
+  try {
+    const cols = `c.id, c.user_profile_id, c.mentor_id, c.user_id, c.status, c.created_at,
+      m.name as mentor_name, m.specialty as mentor_specialty, m.institution as mentor_institution,
+      m.avatar_grad as mentor_avatar_grad, m.photo as mentor_photo, m.initials as mentor_initials,
+      m.linked_user_id as mentor_linked_user_id,
+      up.name as mentee_name, up.initials as mentee_initials, up.photo as mentee_photo`;
+
+    const [asMentee, asMentor] = await Promise.all([
+      pool.query(
+        `SELECT ${cols} FROM connections c
+         JOIN mentors m ON c.mentor_id = m.id
+         LEFT JOIN user_profiles up ON c.user_profile_id = up.id
+         WHERE c.user_id = $1 ORDER BY c.created_at DESC`,
+        [req.user.userId]
+      ),
+      pool.query(
+        `SELECT ${cols} FROM connections c
+         JOIN mentors m ON c.mentor_id = m.id
+         LEFT JOIN user_profiles up ON c.user_profile_id = up.id
+         WHERE m.linked_user_id = $1 ORDER BY c.created_at DESC`,
+        [req.user.userId]
+      ),
+    ]);
+    res.json({ asMentee: asMentee.rows, asMentor: asMentor.rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/connections', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -334,6 +387,55 @@ app.get('/api/connections', async (req, res) => {
        ORDER BY c.created_at DESC`
     );
     res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/connections/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const { rows } = await pool.query(
+      'UPDATE connections SET status=$1 WHERE id=$2 RETURNING *',
+      [status, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── MESSAGES ──────────────────────────────────────────────────────────────────
+
+app.get('/api/messages', authMiddleware, async (req, res) => {
+  try {
+    const { connection_id } = req.query;
+    if (!connection_id) return res.status(400).json({ error: 'connection_id required' });
+    const { rows } = await pool.query(
+      'SELECT * FROM messages WHERE connection_id=$1 ORDER BY created_at ASC',
+      [connection_id]
+    );
+    await pool.query(
+      'UPDATE messages SET is_read=true WHERE connection_id=$1 AND sender_user_id!=$2',
+      [connection_id, req.user.userId]
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/messages', authMiddleware, async (req, res) => {
+  try {
+    const { connection_id, content } = req.body;
+    if (!connection_id || !content?.trim()) return res.status(400).json({ error: 'connection_id and content required' });
+    const { rows } = await pool.query(
+      'INSERT INTO messages (connection_id, sender_user_id, content) VALUES ($1,$2,$3) RETURNING *',
+      [connection_id, req.user.userId, content.trim()]
+    );
+    res.status(201).json(rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
