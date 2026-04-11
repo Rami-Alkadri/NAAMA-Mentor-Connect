@@ -99,6 +99,22 @@ app.put('/api/auth/link-profile', authMiddleware, async (req, res) => {
   }
 });
 
+app.delete('/api/auth/delete-account', authMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT profile_id FROM users WHERE id = $1', [req.user.userId]);
+    const user = rows[0];
+    if (user?.profile_id) {
+      await pool.query('DELETE FROM connections WHERE user_profile_id = $1', [user.profile_id]);
+      await pool.query('DELETE FROM schedule_requests WHERE user_profile_id = $1', [user.profile_id]);
+      await pool.query('DELETE FROM user_profiles WHERE id = $1', [user.profile_id]);
+    }
+    await pool.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── MENTORS ──────────────────────────────────────────────────────────────────
 
 app.get('/api/mentors', async (req, res) => {

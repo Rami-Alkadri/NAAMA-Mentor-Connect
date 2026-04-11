@@ -1757,6 +1757,9 @@ export default function App() {
   const [stateFilter, setStateFilter] = useState('');
   const [imgOnly, setImgOnly] = useState(false);
   const [mentors, setMentors] = useState<any[]>([DANA]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const prevRequestsLen = useRef(0);
 
   useEffect(() => {
@@ -2303,7 +2306,7 @@ export default function App() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
+          <div style={{ marginTop: 20, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <button
               className="onboard-back"
               style={{ color: 'var(--error)', display: 'inline-block' }}
@@ -2311,7 +2314,53 @@ export default function App() {
             >
               Sign Out
             </button>
+            <button
+              className="onboard-back"
+              style={{ color: 'rgba(224,90,58,0.5)', fontSize: 11, display: 'inline-block' }}
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete Account
+            </button>
           </div>
+
+          {showDeleteConfirm && (
+            <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+              <div className="modal" style={{ maxWidth: 360 }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 8 }}>Delete Account?</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 20, lineHeight: 1.6 }}>
+                  This will permanently delete your account, profile, connections, and session history. This cannot be undone.
+                </div>
+                {deleteError && <div style={{ background: 'rgba(224,90,58,0.1)', border: '1px solid rgba(224,90,58,0.3)', color: 'var(--error)', fontSize: 12, padding: '10px 14px', borderRadius: 10, marginBottom: 14 }}>{deleteError}</div>}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="onboard-back" style={{ flex: 1 }} onClick={() => { setShowDeleteConfirm(false); setDeleteError(''); }}>
+                    Cancel
+                  </button>
+                  <button
+                    className="auth-submit"
+                    style={{ flex: 1, background: 'var(--error)', opacity: deleteLoading ? 0.5 : 1 }}
+                    disabled={deleteLoading}
+                    onClick={async () => {
+                      setDeleteLoading(true);
+                      setDeleteError('');
+                      try {
+                        const res = await fetch('/api/auth/delete-account', {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (!res.ok) { const d = await res.json(); setDeleteError(d.error || 'Failed to delete account.'); setDeleteLoading(false); return; }
+                        handleLogout();
+                      } catch {
+                        setDeleteError('Network error. Please try again.');
+                        setDeleteLoading(false);
+                      }
+                    }}
+                  >
+                    {deleteLoading ? 'Deleting…' : 'Yes, Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
