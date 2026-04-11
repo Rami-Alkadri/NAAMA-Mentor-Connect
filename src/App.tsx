@@ -580,7 +580,7 @@ const MENTOR_TAGS: Record<string, string[]> = {
     'Career Planning',
     'Work-Life Balance',
     'Negotiating Contracts',
-    'Women in Medicine',
+    'Women in NAAMA',
     'IMG Guidance',
   ],
   dentistry: [
@@ -591,7 +591,7 @@ const MENTOR_TAGS: Record<string, string[]> = {
     'Board Exams',
     'Academic Dentistry',
     'Negotiating Contracts',
-    'Women in Medicine',
+    'Women in NAAMA',
   ],
   pharmacy: [
     'Residency (PGY1/PGY2)',
@@ -609,7 +609,7 @@ const MENTOR_TAGS: Record<string, string[]> = {
     'Research Methods',
     'MPH Programs',
     'Community Health',
-    'Women in Medicine',
+    'Women in NAAMA',
   ],
   other: [
     'Career Guidance',
@@ -619,7 +619,7 @@ const MENTOR_TAGS: Record<string, string[]> = {
     'Global Health',
     'Education',
     'Negotiating Contracts',
-    'Women in Medicine',
+    'Women in NAAMA',
   ],
 };
 
@@ -814,7 +814,7 @@ const DANA: any = {
     'Specialty Choice',
     'Medical Education',
     'Global Health',
-    'Women in Medicine',
+    'Women in NAAMA',
   ],
   match: 98,
   mentees: 0,
