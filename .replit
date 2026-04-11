@@ -45,3 +45,8 @@ externalPort = 3002
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
+
+[userenv]
+
+[userenv.shared]
+SMTP_USER = "naamamentorconnect@gmail.com"
