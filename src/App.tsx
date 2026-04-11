@@ -1317,7 +1317,7 @@ function ScheduleTab({
         <div className="page-sub">
           Review and respond to meeting requests from your mentees.
         </div>
-        {requests.length === 0 ? (
+        {requests.filter((r: any) => r.status !== 'declined').length === 0 ? (
           <div className="empty">
             <div className="empty-icon">📅</div>
             <div className="empty-title">No requests yet</div>
@@ -1326,7 +1326,7 @@ function ScheduleTab({
             </div>
           </div>
         ) : (
-          requests.map((r: any, i: number) => (
+          requests.filter((r: any) => r.status !== 'declined').map((r: any, i: number) => (
             <div key={i} className="request-card">
               <div className="request-top">
                 <Avatar
@@ -1342,9 +1342,6 @@ function ScheduleTab({
                 </div>
                 {r.status === 'confirmed' && (
                   <div className="confirmed-badge">✓ Confirmed</div>
-                )}
-                {r.status === 'declined' && (
-                  <div className="declined-badge">Declined</div>
                 )}
               </div>
               <div className="request-details">
@@ -2225,6 +2222,7 @@ export default function App() {
   const [requested, setRequested] = useState(new Set<number>());
   const [myConnections, setMyConnections] = useState<{ asMentee: any[]; asMentor: any[] }>({ asMentee: [], asMentor: [] });
   const [chatConn, setChatConn] = useState<any | null>(null);
+  const [menteeConnTab, setMenteeConnTab] = useState<'active' | 'declined'>('active');
   const [selectedMentor, setSelectedMentor] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [toastMsg, setToastMsg] = useState('');
@@ -2731,40 +2729,93 @@ export default function App() {
                 ))}
               </div>
             )
-          ) : myConnections.asMentee.length === 0 ? (
-            <div className="empty">
-              <div className="empty-icon">🤝</div>
-              <div className="empty-title">No active mentors yet</div>
-              <div className="empty-sub">Connect with a mentor from the Discover tab.</div>
-            </div>
-          ) : (
-            <div className="rel-list">
-              {myConnections.asMentee.map((conn: any) => (
-                <div key={conn.id} className="rel-card">
-                  <Avatar
-                    photo={conn.mentor_photo || ''}
-                    initials={conn.mentor_initials || '?'}
-                    grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
-                    size={44}
-                    radius={11}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div className="rel-name">{conn.mentor_name}</div>
-                    <div className="rel-role">{conn.mentor_specialty}</div>
-                    <div className="rel-last" style={{ color: conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                      {conn.status === 'accepted' ? '● Connected' : '⏳ Awaiting acceptance'}
-                    </div>
-                  </div>
-                  <div className="rel-actions">
-                    <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>
-                    {conn.status === 'accepted' && (
-                      <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>
-                    )}
-                  </div>
+          ) : (() => {
+            const activeConns = myConnections.asMentee.filter((c: any) => c.status !== 'declined');
+            const declinedConns = myConnections.asMentee.filter((c: any) => c.status === 'declined');
+            return (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                  {(['active', 'declined'] as const).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setMenteeConnTab(t)}
+                      style={{
+                        padding: '6px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+                        background: menteeConnTab === t ? 'var(--gold)' : 'rgba(255,255,255,0.07)',
+                        color: menteeConnTab === t ? '#0d1b2a' : 'var(--text-dim)',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {t === 'active' ? `Active (${activeConns.length})` : `Declined (${declinedConns.length})`}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+                {menteeConnTab === 'active' ? (
+                  activeConns.length === 0 ? (
+                    <div className="empty">
+                      <div className="empty-icon">🤝</div>
+                      <div className="empty-title">No active mentors yet</div>
+                      <div className="empty-sub">Connect with a mentor from the Discover tab.</div>
+                    </div>
+                  ) : (
+                    <div className="rel-list">
+                      {activeConns.map((conn: any) => (
+                        <div key={conn.id} className="rel-card">
+                          <Avatar
+                            photo={conn.mentor_photo || ''}
+                            initials={conn.mentor_initials || '?'}
+                            grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
+                            size={44}
+                            radius={11}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div className="rel-name">{conn.mentor_name}</div>
+                            <div className="rel-role">{conn.mentor_specialty}</div>
+                            <div className="rel-last" style={{ color: conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                              {conn.status === 'accepted' ? '● Connected' : '⏳ Awaiting acceptance'}
+                            </div>
+                          </div>
+                          <div className="rel-actions">
+                            <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>
+                            {conn.status === 'accepted' && (
+                              <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  declinedConns.length === 0 ? (
+                    <div className="empty">
+                      <div className="empty-icon">✓</div>
+                      <div className="empty-title">No declined requests</div>
+                      <div className="empty-sub">Any requests a mentor declines will appear here.</div>
+                    </div>
+                  ) : (
+                    <div className="rel-list">
+                      {declinedConns.map((conn: any) => (
+                        <div key={conn.id} className="rel-card" style={{ opacity: 0.65 }}>
+                          <Avatar
+                            photo={conn.mentor_photo || ''}
+                            initials={conn.mentor_initials || '?'}
+                            grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
+                            size={44}
+                            radius={11}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div className="rel-name">{conn.mentor_name}</div>
+                            <div className="rel-role">{conn.mentor_specialty}</div>
+                            <div className="rel-last" style={{ color: 'var(--error)' }}>✕ Declined</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
