@@ -1449,7 +1449,7 @@ function ScheduleTab({
                     ))}
                     {Array.from({ length: firstDay }).map((_, i) => <div key={'e'+i} />)}
                     {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
-                      const isPast = (year === today.getFullYear() && monthName === today.toLocaleString('default', { month: 'long' }) && d < today.getDate());
+                      const isPast = d < today;
                       return (
                         <button
                           key={d}
@@ -1461,7 +1461,7 @@ function ScheduleTab({
                     })}
                   </div>
                   <div className="time-slots" style={{ marginBottom: 12 }}>
-                    {TIME_SLOTS.map((t: string) => (
+                    {TIMES.map((t: string) => (
                       <button key={t} className={`time-slot${rsTime === t ? ' selected' : ''}`} onClick={() => setRsTime(t)}>{t}</button>
                     ))}
                   </div>
@@ -1597,7 +1597,7 @@ function ScheduleTab({
                     ))}
                     {Array.from({ length: firstDay }).map((_, i) => <div key={'e'+i} />)}
                     {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
-                      const isPast = (year === today.getFullYear() && monthName === today.toLocaleString('default', { month: 'long' }) && d < today.getDate());
+                      const isPast = d < today;
                       return (
                         <button
                           key={d}
@@ -1609,7 +1609,7 @@ function ScheduleTab({
                     })}
                   </div>
                   <div className="time-slots" style={{ marginBottom: 12 }}>
-                    {TIME_SLOTS.map((t: string) => (
+                    {TIMES.map((t: string) => (
                       <button key={t} className={`time-slot${rsTime === t ? ' selected' : ''}`} onClick={() => setRsTime(t)}>{t}</button>
                     ))}
                   </div>
