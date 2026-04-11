@@ -644,4 +644,19 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (_, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
 
-app.listen(PORT, () => console.log(`API server running on port ${PORT}`));
+// ── STARTUP MIGRATIONS ────────────────────────────────────────────────────────
+async function runMigrations() {
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`);
+    await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
+    await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
+    console.log('[DB] Migrations applied');
+  } catch (e) {
+    console.error('[DB] Migration error:', e.message);
+  }
+}
+
+runMigrations().then(() => {
+  app.listen(PORT, () => console.log(`API server running on port ${PORT}`));
+});
