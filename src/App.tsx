@@ -1453,6 +1453,120 @@ function ScheduleTab({
   );
 }
 
+function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile: Profile; profileId: number | null; authToken: string | null; saving: boolean; error: string; onSave: (p: Profile) => void; onClose: () => void; }) {
+  const [name, setName] = useState(profile.name);
+  const [specialty, setSpecialty] = useState(profile.specialty);
+  const [subfield, setSubfield] = useState(profile.subfield);
+  const [level, setLevel] = useState(profile.level);
+  const [year, setYear] = useState(profile.year);
+  const [institution, setInstitution] = useState(profile.institution);
+  const [state, setState] = useState(profile.state);
+  const [isIMG, setIsIMG] = useState(profile.isIMG);
+  const [tags, setTags] = useState<string[]>(profile.tags);
+  const [photo, setPhoto] = useState(profile.photo);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const availTags = MENTOR_TAGS[profile.category] || [];
+  const toggleTag = (t: string) => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+
+  const initials = name.split(' ').filter(Boolean).map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setPhoto(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave({ ...profile, name: name.trim(), initials, specialty, subfield, level, year, institution, state, isIMG, tags, photo });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 500 }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 4 }}>Edit Profile</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 20 }}>Your connections and session history won't be affected.</div>
+
+        <div className="headshot-upload" style={{ marginBottom: 16 }}>
+          <div className="headshot-preview" onClick={() => fileRef.current?.click()}>
+            {photo ? <img src={photo} alt="headshot" /> : <span className="headshot-placeholder">📷</span>}
+            <div className="headshot-overlay">✎</div>
+          </div>
+          <div className="headshot-hint">Click to change photo</div>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
+        </div>
+
+        {error && <div style={{ background: 'rgba(224,90,58,0.1)', border: '1px solid rgba(224,90,58,0.3)', color: 'var(--error)', fontSize: 12, padding: '10px 14px', borderRadius: 10, marginBottom: 14 }}>{error}</div>}
+
+        <div className="form-group">
+          <label className="form-label">Full Name & Credentials</label>
+          <input className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Joanna Smith, MD" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Specialty / Area</label>
+          <SpecialtyDropdown category={profile.category} value={specialty} onChange={setSpecialty} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Sub-headline <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+          <input className="form-input" value={subfield} onChange={e => setSubfield(e.target.value)} placeholder="e.g. Pediatric Cardiology..." />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Current Level</label>
+          <select className="form-input" value={level} onChange={e => setLevel(e.target.value)}>
+            <option value="">Select level...</option>
+            {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">{profile.role === 'mentee' ? 'Training Year' : 'Years of Experience'}</label>
+          {profile.role === 'mentee' ? (
+            <select className="form-input" value={year} onChange={e => setYear(e.target.value)}>
+              <option value="">Select...</option>
+              {['MS1','MS2','MS3','MS4','PGY-1','PGY-2','PGY-3','PGY-4','PGY-5+','Fellow Year 1','Fellow Year 2','Fellow Year 3'].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          ) : (
+            <input className="form-input" value={year} onChange={e => setYear(e.target.value)} placeholder="e.g. 5" />
+          )}
+        </div>
+        <div className="form-group">
+          <label className="form-label">Institution</label>
+          <input className="form-input" value={institution} onChange={e => setInstitution(e.target.value)} placeholder="e.g. Johns Hopkins Hospital" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">State</label>
+          <select className="form-input" value={state} onChange={e => setState(e.target.value)}>
+            <option value="">Select state...</option>
+            {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="img-toggle" onClick={() => setIsIMG(p => !p)}>
+          <div className="img-toggle-label">International Medical Graduate (IMG)<span>I obtained my medical degree outside the US/Canada</span></div>
+          <div className={`toggle-switch${isIMG ? ' on' : ''}`}><div className="toggle-knob" /></div>
+        </div>
+        {availTags.length > 0 && (
+          <div className="form-group">
+            <label className="form-label">Focus Areas</label>
+            <div className="tags-select">
+              {availTags.map(t => (
+                <button key={t} className={`tag-toggle${tags.includes(t) ? ' on' : ''}`} onClick={() => toggleTag(t)}>{t}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button className="onboard-btn" disabled={saving || !name.trim()} onClick={handleSave} style={{ marginTop: 8 }}>
+          {saving ? 'Saving…' : 'Save Changes'}
+        </button>
+        <button className="onboard-back" onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function AuthScreen({ onAuth }: { onAuth: (token: string, profile: any | null) => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -1760,6 +1874,9 @@ export default function App() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
   const prevRequestsLen = useRef(0);
 
   useEffect(() => {
@@ -2306,7 +2423,17 @@ export default function App() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 20, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <div style={{ marginTop: 16 }}>
+            <button
+              className="onboard-btn"
+              style={{ maxWidth: 280, margin: '0 auto', display: 'block' }}
+              onClick={() => { setShowEditProfile(true); setEditError(''); }}
+            >
+              Edit Profile
+            </button>
+          </div>
+
+          <div style={{ marginTop: 12, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <button
               className="onboard-back"
               style={{ color: 'var(--error)', display: 'inline-block' }}
@@ -2322,6 +2449,35 @@ export default function App() {
               Delete Account
             </button>
           </div>
+
+          {showEditProfile && (
+            <EditProfileModal
+              profile={profile}
+              profileId={profileId}
+              authToken={authToken}
+              saving={editSaving}
+              error={editError}
+              onSave={async (updated: Profile) => {
+                setEditSaving(true);
+                setEditError('');
+                try {
+                  const res = await fetch(`/api/profiles/${profileId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                    body: JSON.stringify(updated),
+                  });
+                  if (!res.ok) { const d = await res.json(); setEditError(d.error || 'Failed to save.'); setEditSaving(false); return; }
+                  setProfile(updated);
+                  setShowEditProfile(false);
+                } catch {
+                  setEditError('Network error. Please try again.');
+                } finally {
+                  setEditSaving(false);
+                }
+              }}
+              onClose={() => setShowEditProfile(false)}
+            />
+          )}
 
           {showDeleteConfirm && (
             <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>

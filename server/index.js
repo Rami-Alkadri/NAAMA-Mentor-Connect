@@ -103,10 +103,13 @@ app.delete('/api/auth/delete-account', authMiddleware, async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT profile_id FROM users WHERE id = $1', [req.user.userId]);
     const user = rows[0];
-    if (user?.profile_id) {
-      await pool.query('DELETE FROM connections WHERE user_profile_id = $1', [user.profile_id]);
-      await pool.query('DELETE FROM schedule_requests WHERE user_profile_id = $1', [user.profile_id]);
-      await pool.query('DELETE FROM user_profiles WHERE id = $1', [user.profile_id]);
+    const profileId = user?.profile_id;
+    // Clear the FK link on users first so we can delete the profile
+    await pool.query('UPDATE users SET profile_id = NULL WHERE id = $1', [req.user.userId]);
+    if (profileId) {
+      await pool.query('DELETE FROM connections WHERE user_profile_id = $1', [profileId]);
+      await pool.query('DELETE FROM schedule_requests WHERE user_profile_id = $1', [profileId]);
+      await pool.query('DELETE FROM user_profiles WHERE id = $1', [profileId]);
     }
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
     res.json({ success: true });
@@ -231,6 +234,21 @@ app.get('/api/profiles', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM user_profiles ORDER BY created_at DESC');
     res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/profiles/:id', async (req, res) => {
+  try {
+    const p = req.body;
+    const { rows } = await pool.query(
+      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14
+       WHERE id=$15 RETURNING *`,
+      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
