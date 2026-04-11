@@ -2505,7 +2505,7 @@ export default function App() {
           <img src={NAAMA_LOGO} alt="NAAMA" style={{ height: 38, width: 'auto', objectFit: 'contain', flexShrink: 0 }} className="nav-naama-logo" />
           <div>
             <div className="nav-logo">
-              NAAMA <span>Mentor Connect</span>
+              Mentor <span>Connect</span>
             </div>
             <div className="nav-logo-sub">
               National Arab American Medical Association
