@@ -651,6 +651,20 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`);
     await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
+
+    // Clean up mentor rows whose linked user account has been deleted
+    await pool.query(`
+      DELETE FROM mentors
+      WHERE linked_user_id IS NOT NULL
+        AND linked_user_id NOT IN (SELECT id FROM users)
+    `);
+
+    // Clean up connections that point to now-deleted mentor rows
+    await pool.query(`
+      DELETE FROM connections
+      WHERE mentor_id NOT IN (SELECT id FROM mentors)
+    `);
+
     console.log('[DB] Migrations applied');
   } catch (e) {
     console.error('[DB] Migration error:', e.message);
