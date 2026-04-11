@@ -169,11 +169,20 @@ const styles = `
     .request-meta { font-size:11px; color:var(--text-dim); margin-top:3px; }
     .request-details { background:rgba(255,255,255,0.03); border-radius:10px; padding:10px 12px; font-size:11px; color:var(--text-dim); margin-bottom:12px; line-height:1.7; }
     .request-details strong { color:var(--white); }
-    .request-actions { display:flex; gap:8px; }
+    .request-actions { display:flex; gap:8px; margin-top:10px; }
     .confirm-btn { flex:1; padding:9px; background:var(--accent-teal); color:var(--white); border:none; border-radius:9px; font-size:12px; font-weight:600; cursor:pointer; }
     .confirm-btn:hover { opacity:0.85; }
     .decline-btn { flex:1; padding:9px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:9px; font-size:12px; font-weight:600; cursor:pointer; }
     .decline-btn:hover { border-color:var(--error); color:var(--error); }
+    .reschedule-btn { flex:1; padding:9px; background:transparent; border:1px solid var(--gold); color:var(--gold); border-radius:9px; font-size:12px; font-weight:600; cursor:pointer; }
+    .reschedule-btn:hover { background:rgba(201,168,76,0.1); }
+    .cancel-session-btn { flex:1; padding:9px; background:transparent; border:1px solid var(--error); color:var(--error); border-radius:9px; font-size:12px; font-weight:600; cursor:pointer; }
+    .cancel-session-btn:hover { background:rgba(255,80,80,0.08); }
+    .reschedule-form { margin-top:14px; padding:14px; background:rgba(255,255,255,0.04); border-radius:10px; border:1px solid var(--border); }
+    .reschedule-form-title { font-size:12px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:12px; }
+    .reschedule-form .mt-icon { font-size:14px; }
+    .reschedule-form .mt-name { font-size:11px; font-weight:600; }
+    .reschedule-form .mt-dur { font-size:10px; color:var(--text-dim); }
     .confirmed-badge { font-size:11px; color:var(--accent-teal); font-weight:600; margin-left:auto; }
     .declined-badge { font-size:11px; color:var(--text-dim); font-weight:600; margin-left:auto; }
     .profile-header { background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:24px; display:flex; align-items:flex-start; gap:18px; margin-bottom:18px; }
@@ -1311,13 +1320,49 @@ function ScheduleTab({
   authToken,
   profileId,
   onRefresh,
+  mentorUserId,
 }: any) {
   const [meetingType, setMeetingType] = useState('');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState('');
   const [note, setNote] = useState('');
+  const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [rsType, setRsType] = useState('');
+  const [rsDay, setRsDay] = useState<number | null>(null);
+  const [rsTime, setRsTime] = useState('');
   const { firstDay, daysInMonth, today, monthName, year } = getDaysInMonth();
   const isMentorMode = activeMode === 'mentor';
+
+  const handleCancel = async (r: any) => {
+    if (!window.confirm('Cancel this session? The other party will be notified.')) return;
+    await fetch(`/api/schedule-requests/${r.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled', cancelled_by: isMentorMode ? 'mentor' : 'mentee' }),
+    }).catch(() => {});
+    onRefresh();
+    toast('Session cancelled. Notification sent.');
+  };
+
+  const handleReschedule = async (r: any) => {
+    if (!rsType || !rsDay || !rsTime) { toast('Please select a type, date and time.'); return; }
+    const mt = MEETING_TYPES.find((m: any) => m.id === rsType);
+    await fetch(`/api/schedule-requests/${r.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'reschedule',
+        date: `${monthName} ${rsDay}, ${year}`,
+        time: rsTime,
+        type: `${mt?.name} (${mt?.dur})`,
+        rescheduled_by: isMentorMode ? 'mentor' : 'mentee',
+      }),
+    }).catch(() => {});
+    setReschedulingId(null);
+    setRsType(''); setRsDay(null); setRsTime('');
+    onRefresh();
+    toast('Session rescheduled. Notification sent.');
+  };
 
   if (isMentorMode)
     return (
@@ -1368,6 +1413,63 @@ function ScheduleTab({
                   </>
                 )}
               </div>
+              {r.status === 'confirmed' && (
+                <div className="request-actions">
+                  <button
+                    className="reschedule-btn"
+                    onClick={() => { setReschedulingId(reschedulingId === r.id ? null : r.id); setRsType(''); setRsDay(null); setRsTime(''); }}
+                  >
+                    ↺ Reschedule
+                  </button>
+                  <button className="cancel-session-btn" onClick={() => handleCancel(r)}>
+                    ✕ Cancel
+                  </button>
+                </div>
+              )}
+              {reschedulingId === r.id && (
+                <div className="reschedule-form">
+                  <div className="reschedule-form-title">Propose a new time</div>
+                  <div className="meeting-type-grid" style={{ marginBottom: 12 }}>
+                    {MEETING_TYPES.map((mt: any) => (
+                      <button key={mt.id} className={`meeting-type-btn${rsType === mt.id ? ' selected' : ''}`} onClick={() => setRsType(mt.id)}>
+                        <span className="mt-icon">{mt.icon}</span>
+                        <span className="mt-name">{mt.name}</span>
+                        <span className="mt-dur">{mt.dur}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="calendar-grid" style={{ marginBottom: 12 }}>
+                    {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                      <div key={d} className="cal-header">{d}</div>
+                    ))}
+                    {Array.from({ length: firstDay }).map((_, i) => <div key={'e'+i} />)}
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                      const isPast = (year === today.getFullYear() && monthName === today.toLocaleString('default', { month: 'long' }) && d < today.getDate());
+                      return (
+                        <button
+                          key={d}
+                          className={`cal-day${rsDay === d ? ' selected' : ''}${isPast ? ' past' : ''}`}
+                          disabled={isPast}
+                          onClick={() => !isPast && setRsDay(d)}
+                        >{d}</button>
+                      );
+                    })}
+                  </div>
+                  <div className="time-slots" style={{ marginBottom: 12 }}>
+                    {TIME_SLOTS.map((t: string) => (
+                      <button key={t} className={`time-slot${rsTime === t ? ' selected' : ''}`} onClick={() => setRsTime(t)}>{t}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="submit-btn" style={{ flex: 1 }} onClick={() => handleReschedule(r)}>
+                      Propose New Time
+                    </button>
+                    <button className="decline-btn" onClick={() => setReschedulingId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               {r.status === 'pending' && (
                 <div className="request-actions">
                   <button
@@ -1425,6 +1527,7 @@ function ScheduleTab({
         time: selectedTime,
         note,
         status: 'pending',
+        mentor_user_id: mentorUserId || null,
       },
     ]);
     setMeetingType('');
@@ -1460,6 +1563,61 @@ function ScheduleTab({
                 <strong>Time:</strong> {r.time}
                 {r.note && <><br /><strong>Note:</strong> {r.note}</>}
               </div>
+              <div className="request-actions">
+                <button
+                  className="reschedule-btn"
+                  onClick={() => { setReschedulingId(reschedulingId === r.id ? null : r.id); setRsType(''); setRsDay(null); setRsTime(''); }}
+                >
+                  ↺ Reschedule
+                </button>
+                <button className="cancel-session-btn" onClick={() => handleCancel(r)}>
+                  ✕ Cancel
+                </button>
+              </div>
+              {reschedulingId === r.id && (
+                <div className="reschedule-form">
+                  <div className="reschedule-form-title">Propose a new time</div>
+                  <div className="meeting-type-grid" style={{ marginBottom: 12 }}>
+                    {MEETING_TYPES.map((mt: any) => (
+                      <button key={mt.id} className={`meeting-type-btn${rsType === mt.id ? ' selected' : ''}`} onClick={() => setRsType(mt.id)}>
+                        <span className="mt-icon">{mt.icon}</span>
+                        <span className="mt-name">{mt.name}</span>
+                        <span className="mt-dur">{mt.dur}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="calendar-grid" style={{ marginBottom: 12 }}>
+                    {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                      <div key={d} className="cal-header">{d}</div>
+                    ))}
+                    {Array.from({ length: firstDay }).map((_, i) => <div key={'e'+i} />)}
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                      const isPast = (year === today.getFullYear() && monthName === today.toLocaleString('default', { month: 'long' }) && d < today.getDate());
+                      return (
+                        <button
+                          key={d}
+                          className={`cal-day${rsDay === d ? ' selected' : ''}${isPast ? ' past' : ''}`}
+                          disabled={isPast}
+                          onClick={() => !isPast && setRsDay(d)}
+                        >{d}</button>
+                      );
+                    })}
+                  </div>
+                  <div className="time-slots" style={{ marginBottom: 12 }}>
+                    {TIME_SLOTS.map((t: string) => (
+                      <button key={t} className={`time-slot${rsTime === t ? ' selected' : ''}`} onClick={() => setRsTime(t)}>{t}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="submit-btn" style={{ flex: 1 }} onClick={() => handleReschedule(r)}>
+                      Propose New Time
+                    </button>
+                    <button className="decline-btn" onClick={() => setReschedulingId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -2864,6 +3022,7 @@ export default function App() {
           authToken={authToken}
           profileId={profileId}
           onRefresh={fetchScheduleRequests}
+          mentorUserId={myConnections.asMentee.find((c: any) => c.status === 'accepted')?.mentor_linked_user_id || null}
         />
       )}
 

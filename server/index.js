@@ -618,9 +618,9 @@ app.post('/api/schedule-requests', async (req, res) => {
   try {
     const r = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO schedule_requests (mentee_name, mentee_initials, mentee_photo, user_profile_id, meeting_type, meeting_date, meeting_time, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [r.mentee, r.menteeInitials, r.menteePhoto || '', r.user_profile_id || null, r.type, r.date, r.time, r.note || '']
+      `INSERT INTO schedule_requests (mentee_name, mentee_initials, mentee_photo, user_profile_id, meeting_type, meeting_date, meeting_time, note, mentor_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [r.mentee, r.menteeInitials, r.menteePhoto || '', r.user_profile_id || null, r.type, r.date, r.time, r.note || '', r.mentor_user_id || null]
     );
     res.status(201).json(rows[0]);
   } catch (e) {
@@ -649,19 +649,94 @@ app.get('/api/schedule-requests', async (req, res) => {
       time: r.meeting_time,
       note: r.note,
       status: r.status,
+      mentor_user_id: r.mentor_user_id,
     })));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+// Helper: look up both parties for a schedule request
+async function getScheduleParties(requestId) {
+  const { rows } = await pool.query(
+    `SELECT sr.mentee_name, sr.meeting_type, sr.meeting_date, sr.meeting_time, sr.mentor_user_id,
+            u_mentee.email as mentee_email,
+            u_mentor.email as mentor_email,
+            m.name as mentor_name
+     FROM schedule_requests sr
+     LEFT JOIN user_profiles up ON up.id = sr.user_profile_id
+     LEFT JOIN users u_mentee ON u_mentee.profile_id = up.id
+     LEFT JOIN users u_mentor ON u_mentor.id = sr.mentor_user_id
+     LEFT JOIN mentors m ON m.linked_user_id = sr.mentor_user_id
+     WHERE sr.id = $1`,
+    [requestId]
+  );
+  return rows[0] || null;
+}
+
 app.put('/api/schedule-requests/:id', async (req, res) => {
   try {
-    const { status } = req.body;
-    const { rows } = await pool.query(
-      'UPDATE schedule_requests SET status=$1 WHERE id=$2 RETURNING *',
-      [status, req.params.id]
-    );
+    const { status, date, time, type, note, action } = req.body;
+    let rows;
+
+    if (action === 'reschedule' || date || time || type) {
+      // Reschedule: update fields and reset to pending
+      const result = await pool.query(
+        `UPDATE schedule_requests
+         SET meeting_date = COALESCE($1, meeting_date),
+             meeting_time = COALESCE($2, meeting_time),
+             meeting_type = COALESCE($3, meeting_type),
+             note         = COALESCE($4, note),
+             status       = 'pending'
+         WHERE id = $5 RETURNING *`,
+        [date || null, time || null, type || null, note !== undefined ? note : null, req.params.id]
+      );
+      rows = result.rows;
+      // Notify both parties
+      const p = await getScheduleParties(req.params.id);
+      if (p) {
+        const by = req.body.rescheduled_by === 'mentor' ? p.mentor_name : p.mentee_name;
+        const newDate = date || p.meeting_date;
+        const newTime = time || p.meeting_time;
+        const emailHtml = (recipientName) =>
+          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+            <h2 style="color:#c9a84c;margin-bottom:8px;">Session Rescheduled</h2>
+            <p style="color:#8a9ab0;">Hi ${recipientName},</p>
+            <p style="color:#8a9ab0;"><strong style="color:#fff">${by}</strong> has proposed a new time for your session:</p>
+            <p style="color:#fff;margin:12px 0;"><strong>New Date:</strong> ${newDate}<br/><strong>New Time:</strong> ${newTime}<br/><strong>Type:</strong> ${type || p.meeting_type}</p>
+            <p style="color:#8a9ab0;">Log in to confirm or decline the updated request.</p>
+            <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+          </div>`;
+        if (req.body.rescheduled_by === 'mentor' && p.mentee_email) sendEmail(p.mentee_email, 'Your session has been rescheduled', emailHtml(p.mentee_name)).catch(() => {});
+        if (req.body.rescheduled_by === 'mentee' && p.mentor_email) sendEmail(p.mentor_email, 'Your session has been rescheduled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+      }
+    } else {
+      // Status-only update (confirm / decline / cancel)
+      const result = await pool.query(
+        'UPDATE schedule_requests SET status=$1 WHERE id=$2 RETURNING *',
+        [status, req.params.id]
+      );
+      rows = result.rows;
+      // Send cancellation notifications
+      if (status === 'cancelled') {
+        const p = await getScheduleParties(req.params.id);
+        if (p) {
+          const cancelledBy = req.body.cancelled_by === 'mentor' ? (p.mentor_name || 'Your mentor') : p.mentee_name;
+          const emailHtml = (recipientName) =>
+            `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+              <h2 style="color:#c9a84c;margin-bottom:8px;">Session Cancelled</h2>
+              <p style="color:#8a9ab0;">Hi ${recipientName},</p>
+              <p style="color:#8a9ab0;"><strong style="color:#fff">${cancelledBy}</strong> has cancelled your upcoming session:</p>
+              <p style="color:#fff;margin:12px 0;"><strong>Date:</strong> ${p.meeting_date}<br/><strong>Time:</strong> ${p.meeting_time}<br/><strong>Type:</strong> ${p.meeting_type}</p>
+              <p style="color:#8a9ab0;">You can schedule a new session from your dashboard.</p>
+              <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+            </div>`;
+          if (req.body.cancelled_by === 'mentor' && p.mentee_email) sendEmail(p.mentee_email, 'Your session has been cancelled', emailHtml(p.mentee_name)).catch(() => {});
+          if (req.body.cancelled_by === 'mentee' && p.mentor_email) sendEmail(p.mentor_email, 'Your session has been cancelled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+        }
+      }
+    }
+
     res.json(rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -734,6 +809,8 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`);
     await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
+    await pool.query(`ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS mentor_user_id INTEGER`);
+    await pool.query(`ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS cancelled_by VARCHAR(20)`);
 
     // Step 1: Delete connections for mentors whose linked user account is gone
     // (must happen BEFORE deleting the mentor rows to satisfy the FK constraint)
