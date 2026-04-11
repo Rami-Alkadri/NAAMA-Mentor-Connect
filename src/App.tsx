@@ -2244,19 +2244,21 @@ export default function App() {
   const allMentors = mentors;
 
   const filteredMentors = allMentors.filter((m: any) => {
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
+    const s = (v: any) => (v || '').toLowerCase();
     const matchQuery =
       !q ||
-      m.name.toLowerCase().includes(q) ||
-      m.specialty.toLowerCase().includes(q) ||
-      m.subfield.toLowerCase().includes(q) ||
-      m.institution.toLowerCase().includes(q) ||
-      m.state.toLowerCase().includes(q) ||
-      m.tags.some((t: string) => t.toLowerCase().includes(q)) ||
+      s(m.name).includes(q) ||
+      s(m.specialty).includes(q) ||
+      s(m.subfield).includes(q) ||
+      s(m.institution).includes(q) ||
+      s(m.state).includes(q) ||
+      s(m.bio).includes(q) ||
+      (Array.isArray(m.tags) && m.tags.some((t: string) => s(t).includes(q))) ||
       (m.isIMG && 'img'.includes(q));
     const matchCat = !categoryFilter || m.category === categoryFilter;
     const matchLevel = !levelFilter || m.level === levelFilter;
-    const matchState = !stateFilter || m.state === stateFilter;
+    const matchState = !stateFilter || s(m.state) === s(stateFilter);
     const matchIMG = !imgOnly || m.isIMG;
     return matchQuery && matchCat && matchLevel && matchState && matchIMG;
   });
