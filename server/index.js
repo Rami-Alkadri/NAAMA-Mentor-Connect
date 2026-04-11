@@ -654,26 +654,38 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
 
-    // Clean up mentor rows whose linked user account has been deleted
+    // Step 1: Delete connections for mentors whose linked user account is gone
+    // (must happen BEFORE deleting the mentor rows to satisfy the FK constraint)
+    await pool.query(`
+      DELETE FROM connections
+      WHERE mentor_id IN (
+        SELECT id FROM mentors
+        WHERE linked_user_id IS NOT NULL
+          AND linked_user_id NOT IN (SELECT id FROM users)
+      )
+    `);
+
+    // Step 2: Now safe to delete orphaned mentor rows
     await pool.query(`
       DELETE FROM mentors
       WHERE linked_user_id IS NOT NULL
         AND linked_user_id NOT IN (SELECT id FROM users)
     `);
 
-    // Clean up connections that point to now-deleted mentor rows
+    // Step 3: Delete any remaining connections pointing to mentor rows that no longer exist
     await pool.query(`
       DELETE FROM connections
       WHERE mentor_id NOT IN (SELECT id FROM mentors)
     `);
 
-    // Clean up connections where the mentee's user account has been deleted
+    // Step 4: Delete connections where the mentee's user account has been deleted
     await pool.query(`
       DELETE FROM connections
-      WHERE user_id NOT IN (SELECT id FROM users)
+      WHERE user_id IS NOT NULL
+        AND user_id NOT IN (SELECT id FROM users)
     `);
 
-    // Clean up schedule_requests where the mentee's profile has been deleted
+    // Step 5: Clean up schedule_requests where the mentee's profile has been deleted
     await pool.query(`
       DELETE FROM schedule_requests
       WHERE user_profile_id IS NOT NULL
