@@ -172,6 +172,8 @@ app.delete('/api/auth/delete-account', authMiddleware, async (req, res) => {
     const profileId = user?.profile_id;
     // Remove linked mentor directory entry first
     await pool.query('DELETE FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
+    // Remove all connections where this user is the mentee (by user_id)
+    await pool.query('DELETE FROM connections WHERE user_id = $1', [req.user.userId]);
     // Clear the FK link on users first so we can delete the profile
     await pool.query('UPDATE users SET profile_id = NULL WHERE id = $1', [req.user.userId]);
     if (profileId) {
@@ -663,6 +665,19 @@ async function runMigrations() {
     await pool.query(`
       DELETE FROM connections
       WHERE mentor_id NOT IN (SELECT id FROM mentors)
+    `);
+
+    // Clean up connections where the mentee's user account has been deleted
+    await pool.query(`
+      DELETE FROM connections
+      WHERE user_id NOT IN (SELECT id FROM users)
+    `);
+
+    // Clean up schedule_requests where the mentee's profile has been deleted
+    await pool.query(`
+      DELETE FROM schedule_requests
+      WHERE user_profile_id IS NOT NULL
+        AND user_profile_id NOT IN (SELECT id FROM user_profiles)
     `);
 
     console.log('[DB] Migrations applied');
