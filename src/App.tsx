@@ -2340,7 +2340,7 @@ export default function App() {
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: JSON.stringify({ user_profile_id: profileId, mentor_id: mentorId }),
+        body: JSON.stringify({ user_profile_id: profileId, mentor_id: mentorId, is_collab: isMentorMode }),
       })
         .then(() => { if (authToken) fetchMyConnections(authToken); })
         .catch(() => {});

@@ -407,23 +407,43 @@ app.post('/api/connections', optionalAuth, async (req, res) => {
     );
     await pool.query('UPDATE mentors SET mentees_count = mentees_count + 1 WHERE id = $1', [mentor_id]);
 
-    // Send email notification to the user who made the connection
+    // Send email notifications to both the requester and the target mentor
     try {
+      const { is_collab } = req.body;
       const [userRes, mentorRes] = await Promise.all([
         pool.query(`SELECT u.email, up.name as profile_name FROM users u JOIN user_profiles up ON u.profile_id = up.id WHERE up.id = $1`, [user_profile_id]),
-        pool.query('SELECT name, specialty, institution FROM mentors WHERE id = $1', [mentor_id]),
+        pool.query(`SELECT m.name, m.specialty, m.institution, m.linked_user_id, u.email as mentor_email
+                    FROM mentors m LEFT JOIN users u ON u.id = m.linked_user_id WHERE m.id = $1`, [mentor_id]),
       ]);
       const user = userRes.rows[0];
       const mentor = mentorRes.rows[0];
+      const requestType = is_collab ? 'Collaboration' : 'Mentorship';
+
+      // Email to requester confirming their request was sent
       if (user?.email && mentor) {
         await sendEmail(
           user.email,
-          `Your connection request to ${mentor.name} was sent!`,
+          `Your ${requestType} request to ${mentor.name} was sent!`,
           `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-            <h2 style="color:#c9a84c;margin-bottom:8px;">Connection Request Sent</h2>
+            <h2 style="color:#c9a84c;margin-bottom:8px;">${requestType} Request Sent</h2>
             <p style="color:#8a9ab0;">Hi ${user.profile_name},</p>
-            <p style="color:#8a9ab0;">Your mentorship request to <strong style="color:#fff">${mentor.name}</strong> (${mentor.specialty} · ${mentor.institution}) has been sent successfully.</p>
+            <p style="color:#8a9ab0;">Your ${requestType.toLowerCase()} request to <strong style="color:#fff">${mentor.name}</strong> (${mentor.specialty} · ${mentor.institution}) has been sent successfully.</p>
             <p style="color:#8a9ab0;">You'll hear back once they review your request. In the meantime, you can schedule a session from your dashboard.</p>
+            <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+          </div>`
+        );
+      }
+
+      // Email to the target mentor notifying them of the incoming request
+      if (mentor?.mentor_email && user) {
+        await sendEmail(
+          mentor.mentor_email,
+          `New ${requestType} Request from ${user.profile_name}`,
+          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+            <h2 style="color:#c9a84c;margin-bottom:8px;">New ${requestType} Request</h2>
+            <p style="color:#8a9ab0;">Hi ${mentor.name},</p>
+            <p style="color:#8a9ab0;"><strong style="color:#fff">${user.profile_name}</strong> has sent you a ${requestType.toLowerCase()} request on NAAMA Mentor Connect.</p>
+            <p style="color:#8a9ab0;">Log in to your dashboard to review and respond to their request.</p>
             <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
           </div>`
         );
