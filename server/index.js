@@ -546,6 +546,46 @@ app.post('/api/messages', authMiddleware, async (req, res) => {
       [connection_id, req.user.userId, content.trim()]
     );
     res.status(201).json(rows[0]);
+
+    // Send email notification to the recipient (fire-and-forget)
+    pool.query(
+      `SELECT
+         c.user_id as mentee_user_id,
+         m.linked_user_id as mentor_user_id,
+         m.name as mentor_name,
+         up.name as mentee_name,
+         u_mentee.email as mentee_email,
+         u_mentor.email as mentor_email
+       FROM connections c
+       JOIN mentors m ON c.mentor_id = m.id
+       LEFT JOIN user_profiles up ON c.user_profile_id = up.id
+       LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
+       LEFT JOIN users u_mentor ON u_mentor.id = m.linked_user_id
+       WHERE c.id = $1`,
+      [connection_id]
+    ).then(({ rows: connRows }) => {
+      if (!connRows.length) return;
+      const conn = connRows[0];
+      const senderId = req.user.userId;
+      const isSenderMentee = conn.mentee_user_id === senderId;
+      const senderName = isSenderMentee ? conn.mentee_name : conn.mentor_name;
+      const recipientEmail = isSenderMentee ? conn.mentor_email : conn.mentee_email;
+      const recipientName = isSenderMentee ? conn.mentor_name : conn.mentee_name;
+      if (!recipientEmail || !recipientName) return;
+      const preview = content.trim().length > 100 ? content.trim().slice(0, 100) + '…' : content.trim();
+      return sendEmail(
+        recipientEmail,
+        `New message from ${senderName}`,
+        `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+          <h2 style="color:#c9a84c;margin-bottom:8px;">New Message</h2>
+          <p style="color:#8a9ab0;">Hi ${recipientName},</p>
+          <p style="color:#8a9ab0;"><strong style="color:#fff">${senderName}</strong> sent you a message on NAAMA Mentor Connect:</p>
+          <blockquote style="border-left:3px solid #c9a84c;margin:16px 0;padding:12px 16px;background:#162032;border-radius:0 8px 8px 0;color:#fff;">${preview}</blockquote>
+          <p style="color:#8a9ab0;">Log in to your dashboard to reply.</p>
+          <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+        </div>`
+      );
+    }).catch(err => console.error('Chat email error:', err.message));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
