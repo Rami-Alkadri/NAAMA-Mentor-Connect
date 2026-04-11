@@ -1810,10 +1810,10 @@ function ChatModal({ conn, myUserId, authToken, onClose }: { conn: any; myUserId
           <div ref={bottomRef} />
         </div>
 
-        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <input
             className="form-input"
-            style={{ flex: 1, margin: 0, fontSize: 13 }}
+            style={{ flex: 1, minWidth: 0, width: 0, margin: 0, fontSize: 13 }}
             placeholder="Type a message…"
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -1821,7 +1821,7 @@ function ChatModal({ conn, myUserId, authToken, onClose }: { conn: any; myUserId
           />
           <button
             className="connect-btn"
-            style={{ padding: '8px 16px', borderRadius: 10, opacity: (!input.trim() || sending) ? 0.5 : 1 }}
+            style={{ flexShrink: 0, padding: '8px 20px', borderRadius: 10, fontSize: 13, opacity: (!input.trim() || sending) ? 0.5 : 1 }}
             disabled={!input.trim() || sending}
             onClick={send}
           >
