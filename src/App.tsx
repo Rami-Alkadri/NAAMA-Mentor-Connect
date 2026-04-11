@@ -219,6 +219,7 @@ const styles = `
       .nav { padding:10px 14px; flex-wrap:wrap; gap:6px; }
       .nav-logo { font-size:13px; }
       .nav-logo-sub { display:none; }
+      .nav-naama-logo { height:28px !important; }
       .nav-tabs { width:100%; order:3; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
       .nav-tabs::-webkit-scrollbar { display:none; }
       .nav-tab { padding:5px 9px; font-size:10px; white-space:nowrap; }
@@ -2476,12 +2477,15 @@ export default function App() {
     <div className="app">
       <style>{styles}</style>
       <nav className="nav">
-        <div style={{ flexShrink: 0 }}>
-          <div className="nav-logo">
-            NAAMA <span>Mentor Connect</span>
-          </div>
-          <div className="nav-logo-sub">
-            National Arab American Medical Association
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src={NAAMA_LOGO} alt="NAAMA" style={{ height: 38, width: 'auto', objectFit: 'contain', flexShrink: 0 }} className="nav-naama-logo" />
+          <div>
+            <div className="nav-logo">
+              NAAMA <span>Mentor Connect</span>
+            </div>
+            <div className="nav-logo-sub">
+              National Arab American Medical Association
+            </div>
           </div>
         </div>
         <div className="nav-tabs">
