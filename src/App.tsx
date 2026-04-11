@@ -799,6 +799,7 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
   const isBoth = role === 'both';
   const availTags =
     role === 'mentor' || isBoth ? MENTOR_TAGS[category] || [] : MENTEE_TAGS;
+  const [bio, setBio] = useState('');
   const finish = () =>
     onComplete({
       role,
@@ -815,6 +816,7 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
       initials,
       avatarGrad,
       photo,
+      bio,
     });
 
   return (
@@ -1120,6 +1122,17 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="form-group" style={{ marginTop: 16 }}>
+              <label className="form-label">Short Bio <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+              <textarea
+                className="form-input"
+                rows={3}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell others a bit about yourself, your background, and what you're looking for..."
+                style={{ resize: 'none' }}
+              />
             </div>
             <button
               className="onboard-btn"
@@ -2257,7 +2270,7 @@ export default function App() {
                         handleConnect(m.id);
                       }}
                     >
-                      {requested.has(m.id) ? 'Sent ✓' : 'Connect'}
+                      {requested.has(m.id) ? 'Sent ✓' : isMentorMode ? 'Collaborate' : 'Connect'}
                     </button>
                   </div>
                 </div>
@@ -2628,7 +2641,7 @@ export default function App() {
             >
               {requested.has(selectedMentor.id)
                 ? 'Connection Request Sent ✓'
-                : 'Request Mentorship'}
+                : isMentorMode ? 'Request Collaboration' : 'Request Mentorship'}
             </button>
           </div>
         </div>
