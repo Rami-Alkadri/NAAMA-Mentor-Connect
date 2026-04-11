@@ -2726,6 +2726,9 @@ export default function App() {
               <div className="rel-list">
                 {myConnections.asMentor.map((conn: any) => (
                   <div key={conn.id} className="rel-card">
+                    {conn.status === 'accepted' && (
+                      <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
+                    )}
                     <Avatar
                       photo={conn.mentee_photo || ''}
                       initials={conn.mentee_initials || '?'}
@@ -2746,11 +2749,8 @@ export default function App() {
                           <button className="rel-btn secondary" onClick={() => handleConnectionStatus(conn.id, 'declined')}>Decline</button>
                         </>
                       )}
-                      {conn.status === 'accepted' && (
-                        <>
-                          {conn.mentee_is_active && <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>}
-                          <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
-                        </>
+                      {conn.status === 'accepted' && conn.mentee_is_active && (
+                        <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
                       )}
                     </div>
                   </div>
@@ -2789,6 +2789,9 @@ export default function App() {
                     <div className="rel-list">
                       {activeConns.map((conn: any) => (
                         <div key={conn.id} className="rel-card">
+                          {conn.status === 'accepted' && (
+                            <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
+                          )}
                           <Avatar
                             photo={conn.mentor_photo || ''}
                             initials={conn.mentor_initials || '?'}
@@ -2810,7 +2813,6 @@ export default function App() {
                               <>
                                 {conn.mentor_is_active && <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>}
                                 {conn.mentor_is_active && <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>}
-                                <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                               </>
                             )}
                           </div>
