@@ -48,6 +48,11 @@ app.use(express.json({ limit: '10mb' }));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// In-memory map of connectionId → timeout handle for delayed connection emails.
+// If the connection is withdrawn within EMAIL_DELAY_MS, the email is cancelled.
+const EMAIL_DELAY_MS = 60 * 60 * 1000; // 60 minutes
+const pendingConnectionEmails = new Map();
+
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
   if (!header) return res.status(401).json({ error: 'No token' });
@@ -425,49 +430,61 @@ app.post('/api/connections', optionalAuth, async (req, res) => {
     );
     await pool.query('UPDATE mentors SET mentees_count = mentees_count + 1 WHERE id = $1', [mentor_id]);
 
-    // Send email notifications to both the requester and the target mentor
-    try {
+    const connectionId = rows[0]?.id;
+
+    // Schedule email notifications with a 60-minute delay so that if the
+    // request is withdrawn before then, the emails are never sent.
+    if (connectionId) {
       const { is_collab } = req.body;
-      const [userRes, mentorRes] = await Promise.all([
-        pool.query(`SELECT u.email, up.name as profile_name FROM users u JOIN user_profiles up ON u.profile_id = up.id WHERE up.id = $1`, [user_profile_id]),
-        pool.query(`SELECT m.name, m.specialty, m.institution, m.linked_user_id, u.email as mentor_email
-                    FROM mentors m LEFT JOIN users u ON u.id = m.linked_user_id WHERE m.id = $1`, [mentor_id]),
-      ]);
-      const user = userRes.rows[0];
-      const mentor = mentorRes.rows[0];
-      const requestType = is_collab ? 'Collaboration' : 'Mentorship';
+      const timeoutHandle = setTimeout(async () => {
+        pendingConnectionEmails.delete(connectionId);
+        try {
+          const [userRes, mentorRes] = await Promise.all([
+            pool.query(`SELECT u.email, up.name as profile_name FROM users u JOIN user_profiles up ON u.profile_id = up.id WHERE up.id = $1`, [user_profile_id]),
+            pool.query(`SELECT m.name, m.specialty, m.institution, m.linked_user_id, u.email as mentor_email
+                        FROM mentors m LEFT JOIN users u ON u.id = m.linked_user_id WHERE m.id = $1`, [mentor_id]),
+          ]);
+          // Verify connection still exists before sending
+          const { rows: check } = await pool.query('SELECT id FROM connections WHERE id = $1', [connectionId]);
+          if (!check.length) return; // withdrawn before timer fired
 
-      // Email to requester confirming their request was sent
-      if (user?.email && mentor) {
-        await sendEmail(
-          user.email,
-          `Your ${requestType} request to ${mentor.name} was sent!`,
-          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-            <h2 style="color:#c9a84c;margin-bottom:8px;">${requestType} Request Sent</h2>
-            <p style="color:#8a9ab0;">Hi ${user.profile_name},</p>
-            <p style="color:#8a9ab0;">Your ${requestType.toLowerCase()} request to <strong style="color:#fff">${mentor.name}</strong> (${mentor.specialty} · ${mentor.institution}) has been sent successfully.</p>
-            <p style="color:#8a9ab0;">You'll hear back once they review your request. In the meantime, you can schedule a session from your dashboard.</p>
-            <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-          </div>`
-        );
-      }
+          const user = userRes.rows[0];
+          const mentor = mentorRes.rows[0];
+          const requestType = is_collab ? 'Collaboration' : 'Mentorship';
 
-      // Email to the target mentor notifying them of the incoming request
-      if (mentor?.mentor_email && user) {
-        await sendEmail(
-          mentor.mentor_email,
-          `New ${requestType} Request from ${user.profile_name}`,
-          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-            <h2 style="color:#c9a84c;margin-bottom:8px;">New ${requestType} Request</h2>
-            <p style="color:#8a9ab0;">Hi ${mentor.name},</p>
-            <p style="color:#8a9ab0;"><strong style="color:#fff">${user.profile_name}</strong> has sent you a ${requestType.toLowerCase()} request on NAAMA Mentor Connect.</p>
-            <p style="color:#8a9ab0;">Log in to your dashboard to review and respond to their request.</p>
-            <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-          </div>`
-        );
-      }
-    } catch (emailErr) {
-      console.error('Connection email error:', emailErr.message);
+          if (user?.email && mentor) {
+            sendEmail(
+              user.email,
+              `Your ${requestType} request to ${mentor.name} was sent!`,
+              `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+                <h2 style="color:#c9a84c;margin-bottom:8px;">${requestType} Request Sent</h2>
+                <p style="color:#8a9ab0;">Hi ${user.profile_name},</p>
+                <p style="color:#8a9ab0;">Your ${requestType.toLowerCase()} request to <strong style="color:#fff">${mentor.name}</strong> (${mentor.specialty} · ${mentor.institution}) has been sent successfully.</p>
+                <p style="color:#8a9ab0;">You'll hear back once they review your request. In the meantime, you can schedule a session from your dashboard.</p>
+                <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+              </div>`
+            ).catch(() => {});
+          }
+
+          if (mentor?.mentor_email && user) {
+            sendEmail(
+              mentor.mentor_email,
+              `New ${requestType} Request from ${user.profile_name}`,
+              `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+                <h2 style="color:#c9a84c;margin-bottom:8px;">New ${requestType} Request</h2>
+                <p style="color:#8a9ab0;">Hi ${mentor.name},</p>
+                <p style="color:#8a9ab0;"><strong style="color:#fff">${user.profile_name}</strong> has sent you a ${requestType.toLowerCase()} request on NAAMA Mentor Connect.</p>
+                <p style="color:#8a9ab0;">Log in to your dashboard to review and respond to their request.</p>
+                <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+              </div>`
+            ).catch(() => {});
+          }
+        } catch (emailErr) {
+          console.error('Delayed connection email error:', emailErr.message);
+        }
+      }, EMAIL_DELAY_MS);
+
+      pendingConnectionEmails.set(connectionId, timeoutHandle);
     }
 
     res.status(201).json(rows[0] || { status: 'already_exists' });
@@ -549,7 +566,15 @@ app.delete('/api/connections/:id', authMiddleware, async (req, res) => {
       [req.params.id, req.user.userId]
     );
     if (!rows.length) return res.status(403).json({ error: 'Not authorized or not found' });
-    await pool.query('DELETE FROM connections WHERE id = $1', [req.params.id]);
+
+    // Cancel any pending email notification for this connection
+    const connId = Number(req.params.id);
+    if (pendingConnectionEmails.has(connId)) {
+      clearTimeout(pendingConnectionEmails.get(connId));
+      pendingConnectionEmails.delete(connId);
+    }
+
+    await pool.query('DELETE FROM connections WHERE id = $1', [connId]);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
