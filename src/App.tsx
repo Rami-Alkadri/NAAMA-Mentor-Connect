@@ -767,6 +767,7 @@ type Profile = {
   institution: string;
   state: string;
   year: string;
+  year_set_date?: string | null;
   isIMG: boolean;
   tags: string[];
   initials: string;
