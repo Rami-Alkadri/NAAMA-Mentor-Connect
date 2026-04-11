@@ -517,6 +517,23 @@ app.put('/api/connections/:id/status', authMiddleware, async (req, res) => {
   }
 });
 
+app.delete('/api/connections/:id', authMiddleware, async (req, res) => {
+  try {
+    // Allow deletion only if the requesting user is the mentee or the mentor in this connection
+    const { rows } = await pool.query(
+      `SELECT c.id FROM connections c
+       JOIN mentors m ON c.mentor_id = m.id
+       WHERE c.id = $1 AND (c.user_id = $2 OR m.linked_user_id = $2)`,
+      [req.params.id, req.user.userId]
+    );
+    if (!rows.length) return res.status(403).json({ error: 'Not authorized or not found' });
+    await pool.query('DELETE FROM connections WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── MESSAGES ──────────────────────────────────────────────────────────────────
 
 app.get('/api/messages', authMiddleware, async (req, res) => {

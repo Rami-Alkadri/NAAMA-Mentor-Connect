@@ -2358,6 +2358,27 @@ export default function App() {
       .catch(() => {});
   };
 
+  const handleDeleteConnection = (connId: number, label: string) => {
+    if (!authToken) return;
+    if (!window.confirm(`${label} — are you sure? This cannot be undone.`)) return;
+    fetch(`/api/connections/${connId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+      .then(() => {
+        setMyConnections(prev => ({
+          asMentee: prev.asMentee.filter((c: any) => c.id !== connId),
+          asMentor: prev.asMentor.filter((c: any) => c.id !== connId),
+        }));
+        setRequested(prev => {
+          const next = new Set(prev);
+          return next;
+        });
+        showToast(label === 'Withdraw request' ? 'Request withdrawn.' : 'Match cancelled.');
+      })
+      .catch(() => showToast('Something went wrong. Please try again.'));
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('naama_token');
     setAuthToken(null);
@@ -2726,7 +2747,10 @@ export default function App() {
                         </>
                       )}
                       {conn.status === 'accepted' && (
-                        <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
+                        <>
+                          <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
+                          <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2780,9 +2804,14 @@ export default function App() {
                             </div>
                           </div>
                           <div className="rel-actions">
-                            <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>
-                            {conn.status === 'accepted' && (
-                              <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>
+                            {conn.status === 'pending' ? (
+                              <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)' }} onClick={() => handleDeleteConnection(conn.id, 'Withdraw request')}>Withdraw</button>
+                            ) : (
+                              <>
+                                <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>
+                                <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>
+                                <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
+                              </>
                             )}
                           </div>
                         </div>
