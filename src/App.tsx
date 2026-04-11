@@ -1693,13 +1693,15 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
   );
 }
 
-function AuthScreen({ onAuth }: { onAuth: (token: string, profile: any | null) => void }) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, profile: any | null) => void; initialResetToken?: string }) {
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>(initialResetToken ? 'reset' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const resetToken = initialResetToken || '';
 
   const authStyles = `
     .auth-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; position:relative; overflow:hidden; }
@@ -1710,14 +1712,17 @@ function AuthScreen({ onAuth }: { onAuth: (token: string, profile: any | null) =
     .auth-mode-tab { flex:1; padding:8px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--text-dim); transition:all 0.2s; }
     .auth-mode-tab.active { background:var(--gold); color:var(--navy); }
     .auth-error { background:rgba(224,90,58,0.1); border:1px solid rgba(224,90,58,0.3); color:var(--error); font-size:12px; padding:10px 14px; border-radius:10px; margin-bottom:14px; }
+    .auth-success { background:rgba(74,155,142,0.1); border:1px solid rgba(74,155,142,0.3); color:var(--accent-teal); font-size:12px; padding:10px 14px; border-radius:10px; margin-bottom:14px; }
     .auth-submit { width:100%; padding:12px; background:var(--gold); color:var(--navy); border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; margin-top:4px; }
     .auth-submit:hover { background:var(--gold-light); }
     .auth-submit:disabled { opacity:0.4; cursor:default; }
     .auth-footer { font-size:11px; color:var(--text-dim); text-align:center; margin-top:16px; line-height:1.7; }
+    .auth-link { color:var(--gold); cursor:pointer; font-weight:600; }
+    .auth-link:hover { text-decoration:underline; }
   `;
 
   const submit = async () => {
-    setError('');
+    setError(''); setSuccess('');
     if (!email || !password) { setError('Please fill in all fields.'); return; }
     if (mode === 'signup' && password !== confirm) { setError('Passwords do not match.'); return; }
     if (mode === 'signup' && password.length < 6) { setError('Password must be at least 6 characters.'); return; }
@@ -1738,6 +1743,45 @@ function AuthScreen({ onAuth }: { onAuth: (token: string, profile: any | null) =
     }
   };
 
+  const submitForgot = async () => {
+    setError(''); setSuccess('');
+    if (!email) { setError('Please enter your email address.'); return; }
+    setLoading(true);
+    try {
+      await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      setSuccess('If an account exists for that email, a reset link has been sent. Check your inbox.');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally { setLoading(false); }
+  };
+
+  const submitReset = async () => {
+    setError(''); setSuccess('');
+    if (!password) { setError('Please enter a new password.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    if (password !== confirm) { setError('Passwords do not match.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, newPassword: password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Something went wrong.'); setLoading(false); return; }
+      setSuccess('Password updated! You can now sign in.');
+      // Clean URL and switch to login after short delay
+      window.history.replaceState({}, '', '/');
+      setTimeout(() => { setMode('login'); setPassword(''); setConfirm(''); }, 1500);
+    } catch {
+      setError('Network error. Please try again.');
+    } finally { setLoading(false); }
+  };
+
   return (
     <div className="auth-wrap">
       <style>{authStyles}</style>
@@ -1747,40 +1791,95 @@ function AuthScreen({ onAuth }: { onAuth: (token: string, profile: any | null) =
         <div className="app-name">Mentor <span>Connect</span></div>
       </div>
       <div className="auth-card">
-        <div className="auth-mode-tabs">
-          <button className={`auth-mode-tab${mode === 'login' ? ' active' : ''}`} onClick={() => { setMode('login'); setError(''); }}>Sign In</button>
-          <button className={`auth-mode-tab${mode === 'signup' ? ' active' : ''}`} onClick={() => { setMode('signup'); setError(''); }}>Create Account</button>
-        </div>
-        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 6 }}>
-          {mode === 'login' ? 'Welcome back.' : 'Join the network.'}
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 20 }}>
-          {mode === 'login' ? 'Sign in to access your mentorship dashboard.' : 'Create an account to connect with mentors and mentees.'}
-        </div>
-        {error && <div className="auth-error">{error}</div>}
-        <div className="form-group">
-          <label className="form-label">Email Address</label>
-          <input className="form-input" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Password</label>
-          <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
-        </div>
-        {mode === 'signup' && (
-          <div className="form-group">
-            <label className="form-label">Confirm Password</label>
-            <input className="form-input" type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+        {(mode === 'login' || mode === 'signup') && (
+          <div className="auth-mode-tabs">
+            <button className={`auth-mode-tab${mode === 'login' ? ' active' : ''}`} onClick={() => { setMode('login'); setError(''); setSuccess(''); }}>Sign In</button>
+            <button className={`auth-mode-tab${mode === 'signup' ? ' active' : ''}`} onClick={() => { setMode('signup'); setError(''); setSuccess(''); }}>Create Account</button>
           </div>
         )}
-        <button className="auth-submit" disabled={loading} onClick={submit}>
-          {loading ? 'Please wait…' : mode === 'login' ? 'Sign In →' : 'Create Account →'}
-        </button>
-        <div className="auth-footer">
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <span style={{ color: 'var(--gold)', cursor: 'pointer', fontWeight: 600 }} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}>
-            {mode === 'login' ? 'Sign up' : 'Sign in'}
-          </span>
-        </div>
+
+        {/* Login / Signup */}
+        {(mode === 'login' || mode === 'signup') && (<>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 6 }}>
+            {mode === 'login' ? 'Welcome back.' : 'Join the network.'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 20 }}>
+            {mode === 'login' ? 'Sign in to access your mentorship dashboard.' : 'Create an account to connect with mentors and mentees.'}
+          </div>
+          {error && <div className="auth-error">{error}</div>}
+          <div className="form-group">
+            <label className="form-label">Email Address</label>
+            <input className="form-input" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+          </div>
+          {mode === 'signup' && (
+            <div className="form-group">
+              <label className="form-label">Confirm Password</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+            </div>
+          )}
+          <button className="auth-submit" disabled={loading} onClick={submit}>
+            {loading ? 'Please wait…' : mode === 'login' ? 'Sign In →' : 'Create Account →'}
+          </button>
+          <div className="auth-footer">
+            {mode === 'login' && (
+              <div style={{ marginBottom: 6 }}>
+                <span className="auth-link" onClick={() => { setMode('forgot'); setError(''); setSuccess(''); }}>Forgot password?</span>
+              </div>
+            )}
+            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <span className="auth-link" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess(''); }}>
+              {mode === 'login' ? 'Sign up' : 'Sign in'}
+            </span>
+          </div>
+        </>)}
+
+        {/* Forgot Password */}
+        {mode === 'forgot' && (<>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 6 }}>Reset password</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 20 }}>Enter your email and we'll send you a reset link.</div>
+          {error && <div className="auth-error">{error}</div>}
+          {success && <div className="auth-success">{success}</div>}
+          {!success && (<>
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input className="form-input" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitForgot()} />
+            </div>
+            <button className="auth-submit" disabled={loading} onClick={submitForgot}>
+              {loading ? 'Sending…' : 'Send Reset Link →'}
+            </button>
+          </>)}
+          <div className="auth-footer">
+            <span className="auth-link" onClick={() => { setMode('login'); setError(''); setSuccess(''); }}>← Back to sign in</span>
+          </div>
+        </>)}
+
+        {/* Reset Password */}
+        {mode === 'reset' && (<>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 6 }}>Set new password</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 20 }}>Choose a new password for your account.</div>
+          {error && <div className="auth-error">{error}</div>}
+          {success && <div className="auth-success">{success}</div>}
+          {!success && (<>
+            <div className="form-group">
+              <label className="form-label">New Password</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitReset()} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirm Password</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitReset()} />
+            </div>
+            <button className="auth-submit" disabled={loading} onClick={submitReset}>
+              {loading ? 'Saving…' : 'Set New Password →'}
+            </button>
+          </>)}
+          <div className="auth-footer">
+            <span className="auth-link" onClick={() => { setMode('login'); setError(''); setSuccess(''); window.history.replaceState({}, '', '/'); }}>← Back to sign in</span>
+          </div>
+        </>)}
       </div>
     </div>
   );
@@ -2260,7 +2359,9 @@ export default function App() {
   if (!authToken) return (
     <div className="app">
       <style>{styles}</style>
-      <AuthScreen onAuth={(token, savedProfile) => {
+      <AuthScreen
+        initialResetToken={new URLSearchParams(window.location.search).get('reset_token') || undefined}
+        onAuth={(token, savedProfile) => {
         setAuthToken(token);
         const decoded: any = JSON.parse(atob(token.split('.')[1]));
         setUserId(decoded.userId);

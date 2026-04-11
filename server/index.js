@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 
 const { Pool } = pg;
 const app = express();
@@ -153,6 +154,61 @@ app.delete('/api/auth/delete-account', authMiddleware, async (req, res) => {
       await pool.query('DELETE FROM user_profiles WHERE id = $1', [profileId]);
     }
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    // Always return success to prevent email enumeration
+    if (!rows.length) return res.json({ success: true });
+    const userId = rows[0].id;
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await pool.query(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [userId, token, expiresAt]
+    );
+    const host = req.get('host');
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+    const resetUrl = `${proto}://${host}/?reset_token=${token}`;
+    await sendEmail(
+      email.toLowerCase(),
+      'Reset your NAAMA Mentor Connect password',
+      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+        <h2 style="color:#c9a84c;margin-bottom:8px;">Password Reset</h2>
+        <p style="color:#8a9ab0;">We received a request to reset your password. Click the button below to set a new one.</p>
+        <a href="${resetUrl}" style="display:inline-block;margin:20px 0;padding:12px 28px;background:#c9a84c;color:#0d1b2a;border-radius:10px;font-weight:700;text-decoration:none;">Reset Password</a>
+        <p style="color:#8a9ab0;font-size:12px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+        <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+      </div>`
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Forgot password error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const { rows } = await pool.query(
+      'SELECT * FROM password_reset_tokens WHERE token = $1 AND used = FALSE AND expires_at > NOW()',
+      [token]
+    );
+    if (!rows.length) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
+    const resetRow = rows[0];
+    const hash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, resetRow.user_id]);
+    await pool.query('UPDATE password_reset_tokens SET used = TRUE WHERE id = $1', [resetRow.id]);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
