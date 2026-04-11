@@ -185,6 +185,8 @@ const styles = `
     .reschedule-form .mt-dur { font-size:10px; color:var(--text-dim); }
     .confirmed-badge { font-size:11px; color:var(--accent-teal); font-weight:600; margin-left:auto; }
     .declined-badge { font-size:11px; color:var(--text-dim); font-weight:600; margin-left:auto; }
+    .cancelled-badge { font-size:11px; color:var(--error); font-weight:600; margin-left:auto; }
+    .rescheduled-badge { font-size:11px; color:var(--gold); font-weight:600; margin-left:auto; }
     .profile-header { background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:24px; display:flex; align-items:flex-start; gap:18px; margin-bottom:18px; }
     .profile-name { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--white); margin-bottom:3px; }
     .profile-role-text { font-size:12px; color:var(--gold-light); margin-bottom:2px; }
@@ -1378,7 +1380,7 @@ function ScheduleTab({
         <div className="page-sub">
           Review and respond to meeting requests from your mentees.
         </div>
-        {requests.filter((r: any) => r.status !== 'declined').length === 0 ? (
+        {requests.filter((r: any) => r.status !== 'declined' && r.status !== 'cancelled').length === 0 && requests.filter((r: any) => r.status === 'cancelled').length === 0 ? (
           <div className="empty">
             <div className="empty-icon">📅</div>
             <div className="empty-title">No requests yet</div>
@@ -1387,7 +1389,7 @@ function ScheduleTab({
             </div>
           </div>
         ) : (
-          requests.filter((r: any) => r.status !== 'declined').map((r: any, i: number) => (
+          requests.filter((r: any) => r.status !== 'declined' && r.status !== 'cancelled').map((r: any, i: number) => (
             <div key={i} className="request-card">
               <div className="request-top">
                 <Avatar
@@ -1514,6 +1516,33 @@ function ScheduleTab({
               )}
             </div>
           ))
+        )}
+        {requests.filter((r: any) => r.status === 'cancelled').length > 0 && (
+          <div style={{ marginTop: 28 }}>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--error)', fontWeight: 600, marginBottom: 10 }}>Cancelled Sessions</div>
+            {requests.filter((r: any) => r.status === 'cancelled').map((r: any, i: number) => (
+              <div key={i} className="request-card" style={{ opacity: 0.6, borderLeft: '3px solid var(--error)' }}>
+                <div className="request-top">
+                  <Avatar
+                    photo={r.menteePhoto || ''}
+                    initials={r.menteeInitials || '?'}
+                    grad="linear-gradient(135deg,#8b5cf6,#6d3fc8)"
+                    size={40}
+                    radius={10}
+                  />
+                  <div>
+                    <div className="request-name">{r.mentee}</div>
+                    <div className="request-meta">{r.type}</div>
+                  </div>
+                  <div className="cancelled-badge">✕ Cancelled</div>
+                </div>
+                <div className="request-details">
+                  <strong>Date:</strong> {r.date}<br />
+                  <strong>Time:</strong> {r.time}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     );
@@ -1649,6 +1678,27 @@ function ScheduleTab({
           ))}
         </div>
       )}
+
+      {requests.filter((r: any) => r.status === 'cancelled').length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--error)', fontWeight: 600, marginBottom: 10 }}>Cancelled Sessions</div>
+          {requests.filter((r: any) => r.status === 'cancelled').map((r: any, i: number) => (
+            <div key={i} className="request-card" style={{ opacity: 0.6, borderLeft: '3px solid var(--error)' }}>
+              <div className="request-top">
+                <div style={{ flex: 1 }}>
+                  <div className="request-name" style={{ color: 'var(--error)' }}>✕ Cancelled</div>
+                  <div className="request-meta">{r.type}</div>
+                </div>
+              </div>
+              <div className="request-details">
+                <strong>Date:</strong> {r.date}<br />
+                <strong>Time:</strong> {r.time}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="schedule-wrap">
         <div className="schedule-panel">
           <h3>Meeting Type</h3>
