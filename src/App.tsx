@@ -251,9 +251,6 @@ const styles = `
       .connect-btn { width:100%; text-align:center; }
       .filter-row { gap:6px; }
       .filter-select { font-size:11px; padding:5px 8px; }
-      .chat-input-bar { padding:8px 10px !important; gap:6px !important; }
-      .chat-input-field { padding:8px 10px !important; font-size:13px; }
-      .chat-send-btn { padding:8px 12px !important; font-size:13px !important; }
     }
 
     @media (max-width: 400px) {
@@ -264,6 +261,11 @@ const styles = `
     .chat-input-bar { display:flex; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid var(--border); flex-shrink:0; }
     .chat-input-field { flex:1 1 0%; min-width:0; padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:var(--white); font-size:13px; font-family:'DM Sans',sans-serif; outline:none; }
     .chat-send-btn { flex-shrink:0; white-space:nowrap; padding:10px 20px; border-radius:10px; font-size:13px; }
+    @media (max-width: 640px) {
+      .chat-input-bar { flex-direction:column; align-items:stretch; gap:8px; padding:10px 12px; }
+      .chat-input-field { width:100%; }
+      .chat-send-btn { width:100%; text-align:center; }
+    }
   `;
 
 const US_STATES = [
