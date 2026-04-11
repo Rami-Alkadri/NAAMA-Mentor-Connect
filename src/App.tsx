@@ -2479,7 +2479,17 @@ export default function App() {
   const fetchMyConnections = (token: string) => {
     fetch('/api/connections/mine', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(data => { if (data.asMentee !== undefined) setMyConnections(data); })
+      .then(data => {
+        if (data.asMentee !== undefined) {
+          setMyConnections(data);
+          // Keep `requested` in sync with real connection state so "Sent ✓" persists across tab switches/reloads
+          setRequested(new Set(
+            data.asMentee
+              .filter((c: any) => c.status !== 'declined')
+              .map((c: any) => c.mentor_id)
+          ));
+        }
+      })
       .catch(() => {});
   };
 
@@ -2523,15 +2533,14 @@ export default function App() {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authToken}` },
     })
-      .then(() => {
-        setMyConnections(prev => ({
-          asMentee: prev.asMentee.filter((c: any) => c.id !== connId),
-          asMentor: prev.asMentor.filter((c: any) => c.id !== connId),
-        }));
-        setRequested(prev => {
-          const next = new Set(prev);
-          return next;
-        });
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          showToast(err.error || 'Something went wrong. Please try again.');
+          return;
+        }
+        // Refresh from server — also resets `requested` state correctly
+        fetchMyConnections(authToken);
         showToast(label === 'Withdraw request' ? 'Request withdrawn.' : 'Match cancelled.');
       })
       .catch(() => showToast('Something went wrong. Please try again.'));
@@ -2833,17 +2842,27 @@ export default function App() {
                         <span className="stat-label">Exp.</span>
                       </div>
                     </div>
-                    <button
-                      className={`connect-btn${
-                        requested.has(m.id) ? ' requested' : ''
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleConnect(m.id);
-                      }}
-                    >
-                      {requested.has(m.id) ? 'Sent ✓' : isMentorMode ? 'Collaborate' : 'Connect'}
-                    </button>
+                    {(() => {
+                      const existingConn = myConnections.asMentee.find((c: any) => c.mentor_id === m.id);
+                      const isAccepted = existingConn?.status === 'accepted';
+                      const isPending = requested.has(m.id) || existingConn?.status === 'pending';
+                      return (
+                        <button
+                          className={`connect-btn${isPending || isAccepted ? ' requested' : ''}`}
+                          title={isPending ? 'Click to withdraw request' : isAccepted ? 'Click to unmatch' : ''}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (existingConn) {
+                              handleDeleteConnection(existingConn.id, isAccepted ? 'Cancel match' : 'Withdraw request');
+                            } else if (!isPending) {
+                              handleConnect(m.id);
+                            }
+                          }}
+                        >
+                          {isAccepted ? 'Connected ✓' : isPending ? 'Sent ✓' : isMentorMode ? 'Collaborate' : 'Connect'}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
