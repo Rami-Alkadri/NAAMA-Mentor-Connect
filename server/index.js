@@ -3,16 +3,101 @@ import cors from 'cors';
 import pg from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const { Pool } = pg;
 const app = express();
 const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) : 3001;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const JWT_SECRET = process.env.JWT_SECRET || 'naama-connect-secret-key-2025';
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header) return res.status(401).json({ error: 'No token' });
+  const token = header.replace('Bearer ', '');
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const exists = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (exists.rows.length > 0) return res.status(409).json({ error: 'An account with this email already exists' });
+    const hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, profile_id, created_at',
+      [email.toLowerCase(), hash]
+    );
+    const user = rows[0];
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+    res.status(201).json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id } });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (!rows.length) return res.status(401).json({ error: 'No account found with this email' });
+    const user = rows[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+    let profile = null;
+    if (user.profile_id) {
+      const p = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [user.profile_id]);
+      profile = p.rows[0] || null;
+    }
+    res.json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id }, profile });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT id, email, profile_id, created_at FROM users WHERE id = $1', [req.user.userId]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    const user = rows[0];
+    let profile = null;
+    if (user.profile_id) {
+      const p = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [user.profile_id]);
+      profile = p.rows[0] || null;
+    }
+    res.json({ user, profile });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/auth/link-profile', authMiddleware, async (req, res) => {
+  try {
+    const { profile_id } = req.body;
+    await pool.query('UPDATE users SET profile_id = $1 WHERE id = $2', [profile_id, req.user.userId]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ── MENTORS ──────────────────────────────────────────────────────────────────
 
@@ -116,9 +201,9 @@ app.post('/api/profiles', async (req, res) => {
   try {
     const p = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO user_profiles (name, initials, role, category, specialty, subfield, level, year, tags, state, is_img, avatar_grad, photo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.isIMG || false, p.avatarGrad || '', p.photo || '']
+      `INSERT INTO user_profiles (name, initials, role, category, specialty, subfield, level, year, tags, state, institution, is_img, avatar_grad, photo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '']
     );
     res.status(201).json(rows[0]);
   } catch (e) {

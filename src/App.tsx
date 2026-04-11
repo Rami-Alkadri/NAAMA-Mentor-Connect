@@ -1454,6 +1454,99 @@ function ScheduleTab({
   );
 }
 
+function AuthScreen({ onAuth }: { onAuth: (token: string, profile: any | null) => void }) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const authStyles = `
+    .auth-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; position:relative; overflow:hidden; }
+    .auth-wrap::before { content:''; position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(201,168,76,0.07) 0%,transparent 70%); top:-100px; right:-100px; pointer-events:none; }
+    .auth-wrap::after { content:''; position:absolute; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(74,155,142,0.06) 0%,transparent 70%); bottom:-80px; left:-80px; pointer-events:none; }
+    .auth-card { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:24px; padding:32px; width:100%; max-width:400px; position:relative; z-index:1; }
+    .auth-mode-tabs { display:flex; gap:3px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:24px; }
+    .auth-mode-tab { flex:1; padding:8px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--text-dim); transition:all 0.2s; }
+    .auth-mode-tab.active { background:var(--gold); color:var(--navy); }
+    .auth-error { background:rgba(224,90,58,0.1); border:1px solid rgba(224,90,58,0.3); color:var(--error); font-size:12px; padding:10px 14px; border-radius:10px; margin-bottom:14px; }
+    .auth-submit { width:100%; padding:12px; background:var(--gold); color:var(--navy); border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; margin-top:4px; }
+    .auth-submit:hover { background:var(--gold-light); }
+    .auth-submit:disabled { opacity:0.4; cursor:default; }
+    .auth-footer { font-size:11px; color:var(--text-dim); text-align:center; margin-top:16px; line-height:1.7; }
+  `;
+
+  const submit = async () => {
+    setError('');
+    if (!email || !password) { setError('Please fill in all fields.'); return; }
+    if (mode === 'signup' && password !== confirm) { setError('Passwords do not match.'); return; }
+    if (mode === 'signup' && password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/auth/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Something went wrong.'); setLoading(false); return; }
+      localStorage.setItem('naama_token', data.token);
+      onAuth(data.token, data.profile || null);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-wrap">
+      <style>{authStyles}</style>
+      <div className="naama-brand" style={{ marginBottom: 24, position: 'relative', zIndex: 1 }}>
+        <img src={NAAMA_LOGO} alt="NAAMA" className="naama-logo-img" />
+        <div className="naama-divider" />
+        <div className="app-name">Mentor <span>Connect</span></div>
+      </div>
+      <div className="auth-card">
+        <div className="auth-mode-tabs">
+          <button className={`auth-mode-tab${mode === 'login' ? ' active' : ''}`} onClick={() => { setMode('login'); setError(''); }}>Sign In</button>
+          <button className={`auth-mode-tab${mode === 'signup' ? ' active' : ''}`} onClick={() => { setMode('signup'); setError(''); }}>Create Account</button>
+        </div>
+        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: 'var(--white)', marginBottom: 6 }}>
+          {mode === 'login' ? 'Welcome back.' : 'Join the network.'}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 20 }}>
+          {mode === 'login' ? 'Sign in to access your mentorship dashboard.' : 'Create an account to connect with mentors and mentees.'}
+        </div>
+        {error && <div className="auth-error">{error}</div>}
+        <div className="form-group">
+          <label className="form-label">Email Address</label>
+          <input className="form-input" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Password</label>
+          <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+        </div>
+        {mode === 'signup' && (
+          <div className="form-group">
+            <label className="form-label">Confirm Password</label>
+            <input className="form-input" type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+          </div>
+        )}
+        <button className="auth-submit" disabled={loading} onClick={submit}>
+          {loading ? 'Please wait…' : mode === 'login' ? 'Sign In →' : 'Create Account →'}
+        </button>
+        <div className="auth-footer">
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <span style={{ color: 'var(--gold)', cursor: 'pointer', fontWeight: 600 }} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}>
+            {mode === 'login' ? 'Sign up' : 'Sign in'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminPanel() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1650,6 +1743,9 @@ function AdminPanel() {
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileId, setProfileId] = useState<number | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [activeMode, setActiveMode] = useState<'mentor' | 'mentee'>('mentee');
   const [tab, setTab] = useState('discover');
   const [requested, setRequested] = useState(new Set<number>());
@@ -1663,6 +1759,35 @@ export default function App() {
   const [imgOnly, setImgOnly] = useState(false);
   const [mentors, setMentors] = useState<any[]>([DANA]);
   const prevRequestsLen = useRef(0);
+
+  useEffect(() => {
+    const token = localStorage.getItem('naama_token');
+    if (!token) { setAuthChecked(true); return; }
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) {
+          setAuthToken(token);
+          setUserId(data.user.id);
+          if (data.user.profile_id) setProfileId(data.user.profile_id);
+          if (data.profile) {
+            const p = data.profile;
+            setProfile({
+              role: p.role, name: p.name, category: p.category, specialty: p.specialty,
+              subfield: p.subfield || '', level: p.level, institution: p.institution || '',
+              state: p.state || '', year: p.year || '', isIMG: p.is_img || false,
+              tags: p.tags || [], initials: p.initials || '', avatarGrad: p.avatar_grad || '',
+              photo: p.photo || '',
+            });
+            setActiveMode(p.role === 'mentee' ? 'mentee' : 'mentor');
+          }
+        } else {
+          localStorage.removeItem('naama_token');
+        }
+      })
+      .catch(() => localStorage.removeItem('naama_token'))
+      .finally(() => setAuthChecked(true));
+  }, []);
 
   useEffect(() => {
     fetch('/api/mentors')
@@ -1709,12 +1834,54 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('naama_token');
+    setAuthToken(null);
+    setUserId(null);
+    setProfileId(null);
+    setProfile(null);
+    setRequested(new Set());
+    setRequests([]);
+    setTab('discover');
+  };
+
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
   };
 
   const isAdmin = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('admin');
+
+  if (!authChecked) return (
+    <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <style>{styles}</style>
+      <div style={{ color: 'var(--text-dim)', fontSize: 14 }}>Loading…</div>
+    </div>
+  );
+
+  if (!authToken) return (
+    <div className="app">
+      <style>{styles}</style>
+      <AuthScreen onAuth={(token, savedProfile) => {
+        setAuthToken(token);
+        const decoded: any = JSON.parse(atob(token.split('.')[1]));
+        setUserId(decoded.userId);
+        if (savedProfile) {
+          setProfileId(savedProfile.id);
+          setProfile({
+            role: savedProfile.role, name: savedProfile.name, category: savedProfile.category,
+            specialty: savedProfile.specialty, subfield: savedProfile.subfield || '',
+            level: savedProfile.level, institution: savedProfile.institution || '',
+            state: savedProfile.state || '', year: savedProfile.year || '',
+            isIMG: savedProfile.is_img || false, tags: savedProfile.tags || [],
+            initials: savedProfile.initials || '', avatarGrad: savedProfile.avatar_grad || '',
+            photo: savedProfile.photo || '',
+          });
+          setActiveMode(savedProfile.role === 'mentee' ? 'mentee' : 'mentor');
+        }
+      }} />
+    </div>
+  );
 
   if (!profile)
     return (
@@ -1731,7 +1898,18 @@ export default function App() {
               body: JSON.stringify(p),
             })
               .then(r => r.json())
-              .then(saved => { if (saved.id) setProfileId(saved.id); })
+              .then(saved => {
+                if (saved.id) {
+                  setProfileId(saved.id);
+                  if (authToken && userId) {
+                    fetch('/api/auth/link-profile', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                      body: JSON.stringify({ profile_id: saved.id }),
+                    }).catch(() => {});
+                  }
+                }
+              })
               .catch(() => {});
           }}
         />
@@ -2130,19 +2308,9 @@ export default function App() {
             <button
               className="onboard-back"
               style={{ color: 'var(--error)', display: 'inline-block' }}
-              onClick={() => {
-                setProfile(null);
-                setTab('discover');
-                setRequested(new Set());
-                setRequests([]);
-                setQuery('');
-                setCategoryFilter('');
-                setLevelFilter('');
-                setStateFilter('');
-                setImgOnly(false);
-              }}
+              onClick={handleLogout}
             >
-              Sign out & restart
+              Sign Out
             </button>
           </div>
         </div>
