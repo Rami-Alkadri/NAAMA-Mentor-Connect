@@ -658,6 +658,22 @@ function getDaysInMonth() {
   };
 }
 
+function computeExperience(baseYears: number | string, yearSetDate?: string | null): number {
+  const base = parseInt(String(baseYears)) || 0;
+  if (!yearSetDate) return base;
+  const setDate = new Date(yearSetDate);
+  const now = new Date();
+  let count = 0;
+  let checkYear = setDate.getFullYear();
+  let july1 = new Date(checkYear, 6, 1);
+  if (july1 <= setDate) july1 = new Date(checkYear + 1, 6, 1);
+  while (july1 <= now) {
+    count++;
+    july1 = new Date(july1.getFullYear() + 1, 6, 1);
+  }
+  return base + count;
+}
+
 function Avatar({
   photo,
   initials,
@@ -2631,7 +2647,7 @@ export default function App() {
                         <span className="stat-label">Sessions</span>
                       </div>
                       <div>
-                        <span className="stat-val">{m.years}y</span>
+                        <span className="stat-val">{computeExperience(m.years, m.yearSetDate)}y</span>
                         <span className="stat-label">Exp.</span>
                       </div>
                     </div>
@@ -2833,7 +2849,7 @@ export default function App() {
               ? [
                   ['0', 'Mentees'],
                   ['0', 'Sessions'],
-                  [`${profile.year || 0}y`, 'Experience'],
+                  [`${computeExperience(profile.year || 0, profile.year_set_date)}y`, 'Experience'],
                 ]
               : [
                   ['0', 'Mentors'],
@@ -3013,7 +3029,7 @@ export default function App() {
                 ['Match', selectedMentor.match + '%'],
                 ['Mentees', selectedMentor.mentees],
                 ['Sessions', selectedMentor.sessions],
-                ['Exp.', selectedMentor.years + 'y'],
+                ['Exp.', computeExperience(selectedMentor.years, selectedMentor.yearSetDate) + 'y'],
               ].map(([l, v]) => (
                 <div key={l} className="modal-stat">
                   <span className="modal-stat-val">{v}</span>

@@ -140,8 +140,8 @@ app.put('/api/auth/link-profile', authMiddleware, async (req, res) => {
       const existing = await pool.query('SELECT id FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
       if (!existing.rows.length) {
         await pool.query(
-          `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, is_img, avatar_grad, photo, linked_user_id, match_score, years_exp, mentees_count, sessions_count)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,$16,0,0)`,
+          `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, is_img, avatar_grad, photo, linked_user_id, match_score, years_exp, year_set_date, mentees_count, sessions_count)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,$16,CURRENT_DATE,0,0)`,
           [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield || '', p.institution || '', p.state || '', p.bio || '', p.tags || [], p.is_img, p.avatar_grad || '', p.photo || '', req.user.userId, parseInt(p.year) || 0]
         );
       }
@@ -316,6 +316,7 @@ function formatMentor(r) {
     mentees: r.mentees_count,
     sessions: r.sessions_count,
     years: r.years_exp,
+    yearSetDate: r.year_set_date || null,
     isIMG: r.is_img,
     avatarGrad: r.avatar_grad,
     photo: r.photo || '',
@@ -351,14 +352,14 @@ app.put('/api/profiles/:id', async (req, res) => {
   try {
     const p = req.body;
     const { rows } = await pool.query(
-      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14, bio=$15
+      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14, bio=$15, year_set_date=CURRENT_DATE
        WHERE id=$16 RETURNING *`,
       [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    // Sync years_exp on the linked mentor row if one exists
+    // Sync years_exp and year_set_date on the linked mentor row if one exists
     await pool.query(
-      `UPDATE mentors SET years_exp=$1 WHERE linked_user_id = (SELECT id FROM users WHERE profile_id = $2)`,
+      `UPDATE mentors SET years_exp=$1, year_set_date=CURRENT_DATE WHERE linked_user_id = (SELECT id FROM users WHERE profile_id = $2)`,
       [parseInt(p.year) || 0, req.params.id]
     );
     res.json(rows[0]);
