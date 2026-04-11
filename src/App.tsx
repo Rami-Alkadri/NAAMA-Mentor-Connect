@@ -302,6 +302,8 @@ const SPECIALTIES: Record<string, { group: string; options: string[] }[]> = {
         'Transplant Surgery',
         'Pediatric Surgery',
         'Urological Surgery',
+        'Ophthalmology',
+        'Otolaryngology (ENT)',
       ],
     },
     {
@@ -392,8 +394,6 @@ const SPECIALTIES: Record<string, { group: string; options: string[] }[]> = {
     {
       group: 'Other Specialties',
       options: [
-        'Ophthalmology',
-        'Otolaryngology (ENT)',
         'Physical Medicine & Rehabilitation',
         'Preventive Medicine',
         'Occupational Medicine',
@@ -710,6 +710,7 @@ type Profile = {
   initials: string;
   avatarGrad: string;
   photo: string;
+  bio: string;
 };
 
 const DANA: any = {
@@ -1455,6 +1456,7 @@ function ScheduleTab({
 
 function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile: Profile; profileId: number | null; authToken: string | null; saving: boolean; error: string; onSave: (p: Profile) => void; onClose: () => void; }) {
   const [name, setName] = useState(profile.name);
+  const [bio, setBio] = useState(profile.bio || '');
   const [specialty, setSpecialty] = useState(profile.specialty);
   const [subfield, setSubfield] = useState(profile.subfield);
   const [level, setLevel] = useState(profile.level);
@@ -1481,7 +1483,7 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
 
   const handleSave = () => {
     if (!name.trim()) return;
-    onSave({ ...profile, name: name.trim(), initials, specialty, subfield, level, year, institution, state, isIMG, tags, photo });
+    onSave({ ...profile, name: name.trim(), initials, bio, specialty, subfield, level, year, institution, state, isIMG, tags, photo });
   };
 
   return (
@@ -1505,6 +1507,10 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
         <div className="form-group">
           <label className="form-label">Full Name & Credentials</label>
           <input className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Joanna Smith, MD" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Short Bio <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+          <textarea className="form-input" rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell mentors or mentees a bit about yourself, your background, and what you're looking for..." style={{ resize: 'none' }} />
         </div>
         <div className="form-group">
           <label className="form-label">Specialty / Area</label>
@@ -1896,7 +1902,7 @@ export default function App() {
               subfield: p.subfield || '', level: p.level, institution: p.institution || '',
               state: p.state || '', year: p.year || '', isIMG: p.is_img || false,
               tags: p.tags || [], initials: p.initials || '', avatarGrad: p.avatar_grad || '',
-              photo: p.photo || '',
+              photo: p.photo || '', bio: p.bio || '',
             });
             setActiveMode(p.role === 'mentee' ? 'mentee' : 'mentor');
           }
@@ -1994,7 +2000,7 @@ export default function App() {
             state: savedProfile.state || '', year: savedProfile.year || '',
             isIMG: savedProfile.is_img || false, tags: savedProfile.tags || [],
             initials: savedProfile.initials || '', avatarGrad: savedProfile.avatar_grad || '',
-            photo: savedProfile.photo || '',
+            photo: savedProfile.photo || '', bio: savedProfile.bio || '',
           });
           setActiveMode(savedProfile.role === 'mentee' ? 'mentee' : 'mentor');
         }
@@ -2402,6 +2408,11 @@ export default function App() {
                   </span>
                 ))}
               </div>
+              {profile.bio && (
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, fontStyle: 'italic' }}>
+                  "{profile.bio}"
+                </div>
+              )}
             </div>
           </div>
           <div className="profile-stats">

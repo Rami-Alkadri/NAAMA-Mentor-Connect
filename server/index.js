@@ -5,12 +5,31 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 const { Pool } = pg;
 const app = express();
 const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) : 3001;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = process.env.JWT_SECRET || 'naama-connect-secret-key-2025';
+
+const mailer = process.env.SMTP_USER && process.env.SMTP_PASS
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+  : null;
+
+async function sendEmail(to, subject, html) {
+  if (!mailer) return;
+  try {
+    await mailer.sendMail({ from: `"NAAMA Mentor Connect" <${process.env.SMTP_USER}>`, to, subject, html });
+  } catch (e) {
+    console.error('Email send error:', e.message);
+  }
+}
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -220,9 +239,9 @@ app.post('/api/profiles', async (req, res) => {
   try {
     const p = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO user_profiles (name, initials, role, category, specialty, subfield, level, year, tags, state, institution, is_img, avatar_grad, photo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '']
+      `INSERT INTO user_profiles (name, initials, role, category, specialty, subfield, level, year, tags, state, institution, is_img, avatar_grad, photo, bio)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '']
     );
     res.status(201).json(rows[0]);
   } catch (e) {
@@ -243,9 +262,9 @@ app.put('/api/profiles/:id', async (req, res) => {
   try {
     const p = req.body;
     const { rows } = await pool.query(
-      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14
-       WHERE id=$15 RETURNING *`,
-      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', req.params.id]
+      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14, bio=$15
+       WHERE id=$16 RETURNING *`,
+      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
@@ -273,8 +292,33 @@ app.post('/api/connections', async (req, res) => {
        ON CONFLICT DO NOTHING RETURNING *`,
       [user_profile_id, mentor_id]
     );
-    // bump mentor mentees count
     await pool.query('UPDATE mentors SET mentees_count = mentees_count + 1 WHERE id = $1', [mentor_id]);
+
+    // Send email notification to the user who made the connection
+    try {
+      const [userRes, mentorRes] = await Promise.all([
+        pool.query(`SELECT u.email, up.name as profile_name FROM users u JOIN user_profiles up ON u.profile_id = up.id WHERE up.id = $1`, [user_profile_id]),
+        pool.query('SELECT name, specialty, institution FROM mentors WHERE id = $1', [mentor_id]),
+      ]);
+      const user = userRes.rows[0];
+      const mentor = mentorRes.rows[0];
+      if (user?.email && mentor) {
+        await sendEmail(
+          user.email,
+          `Your connection request to ${mentor.name} was sent!`,
+          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+            <h2 style="color:#c9a84c;margin-bottom:8px;">Connection Request Sent</h2>
+            <p style="color:#8a9ab0;">Hi ${user.profile_name},</p>
+            <p style="color:#8a9ab0;">Your mentorship request to <strong style="color:#fff">${mentor.name}</strong> (${mentor.specialty} · ${mentor.institution}) has been sent successfully.</p>
+            <p style="color:#8a9ab0;">You'll hear back once they review your request. In the meantime, you can schedule a session from your dashboard.</p>
+            <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+          </div>`
+        );
+      }
+    } catch (emailErr) {
+      console.error('Connection email error:', emailErr.message);
+    }
+
     res.status(201).json(rows[0] || { status: 'already_exists' });
   } catch (e) {
     res.status(500).json({ error: e.message });
