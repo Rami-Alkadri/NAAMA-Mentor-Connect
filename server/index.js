@@ -170,17 +170,35 @@ app.delete('/api/auth/delete-account', authMiddleware, async (req, res) => {
     const { rows } = await pool.query('SELECT profile_id FROM users WHERE id = $1', [req.user.userId]);
     const user = rows[0];
     const profileId = user?.profile_id;
-    // Remove linked mentor directory entry first
+
+    // Look up the mentor row (if this user is a mentor) to get mentor.id for FK cleanup
+    const { rows: mentorRows } = await pool.query('SELECT id FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
+    const mentorId = mentorRows[0]?.id;
+
+    // Step 1: Delete connections referencing this mentor row BEFORE deleting the mentor
+    // (connections_mentor_id_fkey: connections.mentor_id → mentors.id)
+    if (mentorId) {
+      await pool.query('DELETE FROM connections WHERE mentor_id = $1', [mentorId]);
+    }
+
+    // Step 2: Delete schedule_requests that reference this mentor user
+    await pool.query('DELETE FROM schedule_requests WHERE mentor_user_id = $1', [req.user.userId]);
+
+    // Step 3: Now safe to delete the mentor row
     await pool.query('DELETE FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
-    // Remove all connections where this user is the mentee (by user_id)
+
+    // Step 4: Delete connections where this user is the mentee
     await pool.query('DELETE FROM connections WHERE user_id = $1', [req.user.userId]);
-    // Clear the FK link on users first so we can delete the profile
+
+    // Step 5: Clear the FK link on users so we can delete the profile
     await pool.query('UPDATE users SET profile_id = NULL WHERE id = $1', [req.user.userId]);
+
     if (profileId) {
       await pool.query('DELETE FROM connections WHERE user_profile_id = $1', [profileId]);
       await pool.query('DELETE FROM schedule_requests WHERE user_profile_id = $1', [profileId]);
       await pool.query('DELETE FROM user_profiles WHERE id = $1', [profileId]);
     }
+
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
     res.json({ success: true });
   } catch (e) {
