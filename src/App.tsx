@@ -2735,12 +2735,12 @@ export default function App() {
                     />
                     <div style={{ flex: 1 }}>
                       <div className="rel-name">{conn.mentee_name || 'Mentee'}</div>
-                      <div className="rel-last" style={{ color: conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                        {conn.status === 'accepted' ? '● Connected' : conn.status === 'declined' ? 'Declined' : '⏳ Pending your acceptance'}
+                      <div className="rel-last" style={{ color: !conn.mentee_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                        {!conn.mentee_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : conn.status === 'declined' ? 'Declined' : '⏳ Pending your acceptance'}
                       </div>
                     </div>
                     <div className="rel-actions">
-                      {conn.status === 'pending' && (
+                      {conn.status === 'pending' && conn.mentee_is_active && (
                         <>
                           <button className="rel-btn primary" onClick={() => handleConnectionStatus(conn.id, 'accepted')}>Accept</button>
                           <button className="rel-btn secondary" onClick={() => handleConnectionStatus(conn.id, 'declined')}>Decline</button>
@@ -2748,7 +2748,7 @@ export default function App() {
                       )}
                       {conn.status === 'accepted' && (
                         <>
-                          <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
+                          {conn.mentee_is_active && <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>}
                           <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                         </>
                       )}
@@ -2799,8 +2799,8 @@ export default function App() {
                           <div style={{ flex: 1 }}>
                             <div className="rel-name">{conn.mentor_name}</div>
                             <div className="rel-role">{conn.mentor_specialty}</div>
-                            <div className="rel-last" style={{ color: conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                              {conn.status === 'accepted' ? '● Connected' : '⏳ Awaiting acceptance'}
+                            <div className="rel-last" style={{ color: !conn.mentor_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                              {!conn.mentor_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : '⏳ Awaiting acceptance'}
                             </div>
                           </div>
                           <div className="rel-actions">
@@ -2808,8 +2808,8 @@ export default function App() {
                               <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)' }} onClick={() => handleDeleteConnection(conn.id, 'Withdraw request')}>Withdraw</button>
                             ) : (
                               <>
-                                <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>
-                                <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>
+                                {conn.mentor_is_active && <button className="rel-btn primary" onClick={() => setTab('schedule')}>Schedule</button>}
+                                {conn.mentor_is_active && <button className="rel-btn secondary" style={{ borderColor: 'var(--accent-teal)', color: 'var(--accent-teal)' }} onClick={() => setChatConn(conn)}>Chat</button>}
                                 <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                               </>
                             )}

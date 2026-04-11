@@ -464,13 +464,16 @@ app.get('/api/connections/mine', authMiddleware, async (req, res) => {
       m.name as mentor_name, m.specialty as mentor_specialty, m.institution as mentor_institution,
       m.avatar_grad as mentor_avatar_grad, m.photo as mentor_photo, m.initials as mentor_initials,
       m.linked_user_id as mentor_linked_user_id,
-      up.name as mentee_name, up.initials as mentee_initials, up.photo as mentee_photo`;
+      COALESCE(m.is_active, true) as mentor_is_active,
+      up.name as mentee_name, up.initials as mentee_initials, up.photo as mentee_photo,
+      COALESCE(u_mentee.is_active, true) as mentee_is_active`;
 
     const [asMentee, asMentor] = await Promise.all([
       pool.query(
         `SELECT ${cols} FROM connections c
          JOIN mentors m ON c.mentor_id = m.id
          LEFT JOIN user_profiles up ON c.user_profile_id = up.id
+         LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
          WHERE c.user_id = $1 ORDER BY c.created_at DESC`,
         [req.user.userId]
       ),
@@ -478,6 +481,7 @@ app.get('/api/connections/mine', authMiddleware, async (req, res) => {
         `SELECT ${cols} FROM connections c
          JOIN mentors m ON c.mentor_id = m.id
          LEFT JOIN user_profiles up ON c.user_profile_id = up.id
+         LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
          WHERE m.linked_user_id = $1 ORDER BY c.created_at DESC`,
         [req.user.userId]
       ),
