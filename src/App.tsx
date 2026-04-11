@@ -2864,7 +2864,7 @@ export default function App() {
                             }
                           }}
                         >
-                          {isAccepted ? 'Connected ✓' : isPending ? 'Sent ✓' : isMentorMode ? 'Collaborate' : 'Connect'}
+                          {isAccepted ? 'Connected ✓' : isPending ? 'Sent ✓ (click to undo)' : isMentorMode ? 'Collaborate' : 'Connect'}
                         </button>
                       );
                     })()}
