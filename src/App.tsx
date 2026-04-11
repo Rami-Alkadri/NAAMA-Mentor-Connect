@@ -391,6 +391,7 @@ const SPECIALTIES: Record<string, { group: string; options: string[] }[]> = {
       options: [
         'General OB/GYN',
         'Maternal-Fetal Medicine',
+        'Minimally Invasive Gynecology',
         'Reproductive Endocrinology & Infertility',
         'Urogynecology',
         'Gynecologic Oncology',
