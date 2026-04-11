@@ -1280,6 +1280,9 @@ function ScheduleTab({
   requests,
   setRequests,
   toast,
+  authToken,
+  profileId,
+  onRefresh,
 }: any) {
   const [meetingType, setMeetingType] = useState('');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -1344,7 +1347,14 @@ function ScheduleTab({
                 <div className="request-actions">
                   <button
                     className="confirm-btn"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (r.id) {
+                        await fetch(`/api/schedule-requests/${r.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status: 'confirmed' }),
+                        }).catch(() => {});
+                      }
                       const u = [...requests];
                       u[i] = { ...r, status: 'confirmed' };
                       setRequests(u);
@@ -1355,10 +1365,15 @@ function ScheduleTab({
                   </button>
                   <button
                     className="decline-btn"
-                    onClick={() => {
-                      const u = [...requests];
-                      u[i] = { ...r, status: 'declined' };
-                      setRequests(u);
+                    onClick={async () => {
+                      if (r.id) {
+                        await fetch(`/api/schedule-requests/${r.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status: 'declined' }),
+                        }).catch(() => {});
+                      }
+                      setRequests(requests.filter((_: any, j: number) => j !== i));
                     }}
                   >
                     Decline
@@ -1394,12 +1409,58 @@ function ScheduleTab({
     toast('Request sent to Dr. Smith!');
   };
 
+  const confirmedSessions = requests.filter((r: any) => r.status === 'confirmed');
+  const pendingSessions = requests.filter((r: any) => r.status === 'pending');
+
   return (
     <div className="page">
       <div className="page-title" style={{ marginBottom: 6 }}>
         Schedule a <span>Session</span>
       </div>
       <div className="page-sub">Propose a meeting time with your mentor.</div>
+
+      {confirmedSessions.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--gold)', fontWeight: 600, marginBottom: 10 }}>Upcoming Sessions</div>
+          {confirmedSessions.map((r: any, i: number) => (
+            <div key={i} className="request-card" style={{ borderLeft: '3px solid var(--accent-teal)' }}>
+              <div className="request-top">
+                <div style={{ flex: 1 }}>
+                  <div className="request-name" style={{ color: 'var(--accent-teal)' }}>✓ Confirmed</div>
+                  <div className="request-meta">{r.type}</div>
+                </div>
+              </div>
+              <div className="request-details">
+                <strong>Date:</strong> {r.date}<br />
+                <strong>Time:</strong> {r.time}
+                {r.note && <><br /><strong>Note:</strong> {r.note}</>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {pendingSessions.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-dim)', fontWeight: 600, marginBottom: 10 }}>Pending Requests</div>
+          {pendingSessions.map((r: any, i: number) => (
+            <div key={i} className="request-card" style={{ borderLeft: '3px solid var(--gold)', opacity: 0.85 }}>
+              <div className="request-top">
+                <div style={{ flex: 1 }}>
+                  <div className="request-name">Awaiting confirmation</div>
+                  <div className="request-meta">{r.type}</div>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600 }}>Pending</div>
+              </div>
+              <div className="request-details">
+                <strong>Date:</strong> {r.date}<br />
+                <strong>Time:</strong> {r.time}
+                {r.note && <><br /><strong>Note:</strong> {r.note}</>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="schedule-wrap">
         <div className="schedule-panel">
           <h3>Meeting Type</h3>
@@ -2090,16 +2151,25 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
+  const fetchScheduleRequests = () => {
     if (!profile) return;
     const isMentorMode = profile.role === 'both' ? activeMode === 'mentor' : profile.role === 'mentor';
-    if (isMentorMode && tab === 'schedule') {
+    if (isMentorMode) {
       fetch('/api/schedule-requests')
         .then(r => r.json())
         .then(data => { if (Array.isArray(data)) setRequests(data); })
         .catch(() => {});
+    } else if (profileId) {
+      fetch(`/api/schedule-requests?user_profile_id=${profileId}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRequests(data); })
+        .catch(() => {});
     }
-  }, [tab, activeMode, profile]);
+  };
+
+  useEffect(() => {
+    if (tab === 'schedule') fetchScheduleRequests();
+  }, [tab, activeMode, profile, profileId]);
 
   useEffect(() => {
     if (requests.length > prevRequestsLen.current && requests.length > 0) {
@@ -2109,7 +2179,14 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...newest, user_profile_id: profileId }),
-        }).catch(() => {});
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.id) {
+              setRequests(prev => prev.map((r: any) => r.id ? r : { ...r, id: data.id, status: data.status || 'pending' }));
+            }
+          })
+          .catch(() => {});
       }
     }
     prevRequestsLen.current = requests.length;
@@ -2569,6 +2646,9 @@ export default function App() {
           requests={requests}
           setRequests={setRequests}
           toast={showToast}
+          authToken={authToken}
+          profileId={profileId}
+          onRefresh={fetchScheduleRequests}
         />
       )}
 

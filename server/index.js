@@ -459,7 +459,15 @@ app.post('/api/schedule-requests', async (req, res) => {
 
 app.get('/api/schedule-requests', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM schedule_requests ORDER BY created_at DESC');
+    const { user_profile_id } = req.query;
+    let query = 'SELECT * FROM schedule_requests';
+    const params = [];
+    if (user_profile_id) {
+      query += ' WHERE user_profile_id = $1';
+      params.push(user_profile_id);
+    }
+    query += ' ORDER BY created_at DESC';
+    const { rows } = await pool.query(query, params);
     res.json(rows.map(r => ({
       id: r.id,
       mentee: r.mentee_name,
