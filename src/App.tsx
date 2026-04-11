@@ -251,12 +251,19 @@ const styles = `
       .connect-btn { width:100%; text-align:center; }
       .filter-row { gap:6px; }
       .filter-select { font-size:11px; padding:5px 8px; }
+      .chat-input-bar { padding:8px 10px !important; gap:6px !important; }
+      .chat-input-field { padding:8px 10px !important; font-size:13px; }
+      .chat-send-btn { padding:8px 12px !important; font-size:13px !important; }
     }
 
     @media (max-width: 400px) {
       .nav-logo { font-size:11px; }
       .nav-tab { padding:4px 7px; font-size:9px; }
     }
+
+    .chat-input-bar { display:flex; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid var(--border); flex-shrink:0; }
+    .chat-input-field { flex:1 1 0%; min-width:0; padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:var(--white); font-size:13px; font-family:'DM Sans',sans-serif; outline:none; }
+    .chat-send-btn { flex-shrink:0; white-space:nowrap; padding:10px 20px; border-radius:10px; font-size:13px; }
   `;
 
 const US_STATES = [
@@ -1984,29 +1991,17 @@ function ChatModal({ conn, myUserId, authToken, onClose }: { conn: any; myUserId
           <div ref={bottomRef} />
         </div>
 
-        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        <div className="chat-input-bar">
           <input
-            style={{
-              flex: '1 1 0%',
-              minWidth: 0,
-              padding: '10px 14px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid var(--border)',
-              borderRadius: 10,
-              color: 'var(--white)',
-              fontSize: 13,
-              fontFamily: "'DM Sans',sans-serif",
-              outline: 'none',
-              margin: 0,
-            }}
+            className="chat-input-field"
             placeholder="Type a message…"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           />
           <button
-            className="connect-btn"
-            style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: 10, fontSize: 13, opacity: (!input.trim() || sending) ? 0.5 : 1 }}
+            className="connect-btn chat-send-btn"
+            style={{ opacity: (!input.trim() || sending) ? 0.5 : 1 }}
             disabled={!input.trim() || sending}
             onClick={send}
           >
