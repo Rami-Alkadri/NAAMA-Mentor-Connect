@@ -1406,7 +1406,7 @@ function ScheduleTab({
     setSelectedDay(null);
     setSelectedTime('');
     setNote('');
-    toast('Request sent to Dr. Smith!');
+    toast('Session request sent!');
   };
 
   const confirmedSessions = requests.filter((r: any) => r.status === 'confirmed');
