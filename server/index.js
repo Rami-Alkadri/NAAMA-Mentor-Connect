@@ -14,21 +14,32 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = process.env.JWT_SECRET || 'naama-connect-secret-key-2025';
 
-const mailer = process.env.SMTP_USER && process.env.SMTP_PASS
+const SMTP_USER = (process.env.SMTP_USER || '').trim();
+const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s/g, '');
+console.log('[SMTP] SMTP_USER:', SMTP_USER || 'NOT SET');
+console.log('[SMTP] SMTP_PASS:', SMTP_PASS ? `SET (${SMTP_PASS.length} chars)` : 'NOT SET');
+
+const mailer = SMTP_USER && SMTP_PASS
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
     })
   : null;
 
+console.log('[SMTP] Mailer initialized:', mailer ? 'YES' : 'NO — credentials missing');
+
 async function sendEmail(to, subject, html) {
-  if (!mailer) return;
+  if (!mailer) {
+    console.error('[SMTP] Cannot send — mailer not initialized (missing credentials)');
+    return;
+  }
   try {
-    await mailer.sendMail({ from: `"NAAMA Mentor Connect" <${process.env.SMTP_USER}>`, to, subject, html });
+    const info = await mailer.sendMail({ from: `"NAAMA Mentor Connect" <${SMTP_USER}>`, to, subject, html });
+    console.log('[SMTP] Email sent to', to, '— messageId:', info.messageId);
   } catch (e) {
-    console.error('Email send error:', e.message);
+    console.error('[SMTP] Send error:', e.message, e.code || '');
   }
 }
 
