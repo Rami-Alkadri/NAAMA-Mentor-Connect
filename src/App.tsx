@@ -2230,6 +2230,7 @@ export default function App() {
   const [stateFilter, setStateFilter] = useState('');
   const [imgOnly, setImgOnly] = useState(false);
   const [mentors, setMentors] = useState<any[]>([DANA]);
+  const [isActive, setIsActive] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -2247,6 +2248,7 @@ export default function App() {
         if (data.user) {
           setAuthToken(token);
           setUserId(data.user.id);
+          setIsActive(data.user.is_active !== false);
           if (data.user.profile_id) setProfileId(data.user.profile_id);
           if (data.profile) {
             const p = data.profile;
@@ -2934,6 +2936,29 @@ export default function App() {
             >
               Sign Out
             </button>
+            <button
+              className="onboard-back"
+              style={{ color: isActive ? 'var(--text-dim)' : 'var(--accent-teal)', fontSize: 12, display: 'inline-block' }}
+              onClick={async () => {
+                const next = !isActive;
+                const res = await fetch('/api/auth/toggle-active', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                  body: JSON.stringify({ is_active: next }),
+                }).catch(() => null);
+                if (res?.ok) {
+                  setIsActive(next);
+                  showToast(next ? 'Account reactivated — your profile is now visible.' : 'Account deactivated — your profile is hidden.');
+                }
+              }}
+            >
+              {isActive ? 'Deactivate Account' : '● Reactivate Account'}
+            </button>
+            {!isActive && (
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', maxWidth: 260, textAlign: 'center', lineHeight: 1.5 }}>
+                Your profile is hidden from discovery. Reactivate to appear again — all your data is preserved.
+              </div>
+            )}
             <button
               className="onboard-back"
               style={{ color: 'rgba(224,90,58,0.5)', fontSize: 11, display: 'inline-block' }}

@@ -106,7 +106,7 @@ app.post('/api/auth/login', async (req, res) => {
       const p = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [user.profile_id]);
       profile = p.rows[0] || null;
     }
-    res.json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id }, profile });
+    res.json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id, is_active: user.is_active !== false }, profile });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -114,15 +114,28 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, email, profile_id, created_at FROM users WHERE id = $1', [req.user.userId]);
+    const { rows } = await pool.query('SELECT id, email, profile_id, is_active, created_at FROM users WHERE id = $1', [req.user.userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
     const user = rows[0];
+    user.is_active = user.is_active !== false;
     let profile = null;
     if (user.profile_id) {
       const p = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [user.profile_id]);
       profile = p.rows[0] || null;
     }
     res.json({ user, profile });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/auth/toggle-active', authMiddleware, async (req, res) => {
+  try {
+    const { is_active } = req.body;
+    await pool.query('UPDATE users SET is_active=$1 WHERE id=$2', [is_active, req.user.userId]);
+    // Also toggle the linked mentor row visibility
+    await pool.query('UPDATE mentors SET is_active=$1 WHERE linked_user_id=$2', [is_active, req.user.userId]);
+    res.json({ success: true, is_active });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -157,6 +170,8 @@ app.delete('/api/auth/delete-account', authMiddleware, async (req, res) => {
     const { rows } = await pool.query('SELECT profile_id FROM users WHERE id = $1', [req.user.userId]);
     const user = rows[0];
     const profileId = user?.profile_id;
+    // Remove linked mentor directory entry first
+    await pool.query('DELETE FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
     // Clear the FK link on users first so we can delete the profile
     await pool.query('UPDATE users SET profile_id = NULL WHERE id = $1', [req.user.userId]);
     if (profileId) {
@@ -231,7 +246,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/mentors', async (req, res) => {
   try {
     const { category, level, state, img, q } = req.query;
-    let query = 'SELECT * FROM mentors WHERE 1=1';
+    let query = 'SELECT * FROM mentors WHERE is_active = true';
     const params = [];
     if (category) { params.push(category); query += ` AND category = $${params.length}`; }
     if (level)    { params.push(level);    query += ` AND level = $${params.length}`; }
