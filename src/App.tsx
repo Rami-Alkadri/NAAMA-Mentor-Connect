@@ -336,7 +336,6 @@ const SPECIALTIES: Record<string, { group: string; options: string[] }[]> = {
         'Reproductive Endocrinology & Infertility',
         'Urogynecology',
         'Gynecologic Oncology',
-        'OB Hospital Medicine',
       ],
     },
     {
@@ -505,8 +504,8 @@ const LEVELS = [
 
 const MENTOR_TAGS: Record<string, string[]> = {
   medicine: [
-    'Residency Planning',
-    'Fellowship Apps',
+    'Residency Match Strategy',
+    'Fellowship Match Strategy',
     'Application Review',
     'Specialty Choice',
     'Research',
@@ -715,18 +714,18 @@ type Profile = {
 
 const DANA: any = {
   id: 1,
-  name: 'Dana Al-Khaled, MD',
-  initials: 'DA',
+  name: 'Joanna Smith, MD',
+  initials: 'JS',
   role: 'Attending Physician',
   category: 'medicine',
-  specialty: 'OB Hospital Medicine',
-  subfield: 'OB/GYN',
+  specialty: 'Internal Medicine',
+  subfield: 'Internal Medicine',
   level: 'Attending',
-  institution: 'Northwestern Memorial Hospital',
-  state: 'Illinois',
-  bio: 'Passionate about medical education and supporting the next generation of physicians. Specializes in OB hospital medicine with deep experience in resident and medical student education.',
+  institution: 'University Hospital',
+  state: 'New York',
+  bio: 'Passionate about medical education and supporting the next generation of physicians. Specializes in internal medicine with deep experience in resident and medical student education.',
   tags: [
-    'Residency Planning',
+    'Residency Match Strategy',
     'Application Review',
     'Specialty Choice',
     'Medical Education',
@@ -912,7 +911,7 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
               <label className="form-label">Full Name & Credentials</label>
               <input
                 className="form-input"
-                placeholder="e.g. Dana Al-Khaled, MD"
+                placeholder="e.g. Joanna Smith, MD"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -1332,7 +1331,7 @@ function ScheduleTab({
     setSelectedDay(null);
     setSelectedTime('');
     setNote('');
-    toast('Request sent to Dr. Al-Khaled!');
+    toast('Request sent to Dr. Smith!');
   };
 
   return (
