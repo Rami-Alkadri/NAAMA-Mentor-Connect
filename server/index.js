@@ -141,8 +141,8 @@ app.put('/api/auth/link-profile', authMiddleware, async (req, res) => {
       if (!existing.rows.length) {
         await pool.query(
           `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, is_img, avatar_grad, photo, linked_user_id, match_score, years_exp, mentees_count, sessions_count)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,0,0,0)`,
-          [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield || '', p.institution || '', p.state || '', p.bio || '', p.tags || [], p.is_img, p.avatar_grad || '', p.photo || '', req.user.userId]
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,$16,0,0)`,
+          [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield || '', p.institution || '', p.state || '', p.bio || '', p.tags || [], p.is_img, p.avatar_grad || '', p.photo || '', req.user.userId, parseInt(p.year) || 0]
         );
       }
     }
@@ -356,6 +356,11 @@ app.put('/api/profiles/:id', async (req, res) => {
       [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    // Sync years_exp on the linked mentor row if one exists
+    await pool.query(
+      `UPDATE mentors SET years_exp=$1 WHERE linked_user_id = (SELECT id FROM users WHERE profile_id = $2)`,
+      [parseInt(p.year) || 0, req.params.id]
+    );
     res.json(rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
