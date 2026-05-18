@@ -666,6 +666,39 @@ app.post('/api/messages', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/messages/conversations', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { rows } = await pool.query(
+      `SELECT
+         c.id, c.user_id, c.is_collab,
+         m.name as mentor_name, m.specialty as mentor_specialty,
+         m.photo as mentor_photo, m.initials as mentor_initials,
+         m.avatar_grad as mentor_avatar_grad, m.linked_user_id as mentor_linked_user_id,
+         up.name as mentee_name, up.initials as mentee_initials, up.photo as mentee_photo,
+         last_msg.content as last_message,
+         last_msg.created_at as last_message_at,
+         last_msg.sender_user_id as last_sender_id,
+         (SELECT COUNT(*)::int FROM messages
+          WHERE connection_id = c.id AND sender_user_id != $1 AND is_read = false) as unread_count
+       FROM connections c
+       JOIN mentors m ON c.mentor_id = m.id
+       LEFT JOIN user_profiles up ON c.user_profile_id = up.id
+       LEFT JOIN LATERAL (
+         SELECT content, created_at, sender_user_id FROM messages
+         WHERE connection_id = c.id
+         ORDER BY created_at DESC LIMIT 1
+       ) last_msg ON true
+       WHERE (c.user_id = $1 OR m.linked_user_id = $1) AND c.status = 'accepted'
+       ORDER BY last_message_at DESC NULLS LAST`,
+      [userId]
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── SCHEDULE REQUESTS ─────────────────────────────────────────────────────────
 
 app.post('/api/schedule-requests', async (req, res) => {

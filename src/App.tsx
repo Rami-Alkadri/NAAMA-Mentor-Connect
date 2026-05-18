@@ -2451,6 +2451,7 @@ export default function App() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [conversations, setConversations] = useState<any[]>([]);
   const prevRequestsLen = useRef(0);
 
   useEffect(() => {
@@ -2530,6 +2531,20 @@ export default function App() {
     }
     prevRequestsLen.current = requests.length;
   }, [requests]);
+
+  const fetchConversations = (token: string) => {
+    fetch('/api/messages/conversations', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setConversations(data); })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!authToken) return;
+    fetchConversations(authToken);
+    const t = setInterval(() => fetchConversations(authToken), 10000);
+    return () => clearInterval(t);
+  }, [authToken]);
 
   const fetchMyConnections = (token: string) => {
     fetch('/api/connections/mine', { headers: { Authorization: `Bearer ${token}` } })
@@ -2716,11 +2731,14 @@ export default function App() {
     ...(isMentorMode ? myConnections.asMentor.filter((c: any) => c.status === 'pending') : []),
   ];
 
+  const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unread_count || 0), 0);
+
   const tabs = [
     ['discover', 'Discover'],
     ['relationships', isMentorMode ? 'My Mentees' : 'My Mentors'],
     ...(isMentorMode ? [['collaborators', 'My Collaborators']] : []),
     ['requests', `Requests${pendingSentRequests.length > 0 ? ` (${pendingSentRequests.length})` : ''}`],
+    ['messages', `Messages${totalUnread > 0 ? ` (${totalUnread})` : ''}`],
     ['schedule', 'Schedule'],
     ['profile', 'Profile'],
     ...(isAdmin ? [['admin', '⚙ Admin']] : []),
@@ -3217,6 +3235,84 @@ export default function App() {
               </>
             );
           })()}
+        </div>
+      )}
+
+      {tab === 'messages' && (
+        <div className="page">
+          <div className="page-title" style={{ marginBottom: 6 }}>
+            <span>Messages</span>
+          </div>
+          <div className="page-sub">All your active conversations.</div>
+          {conversations.length === 0 ? (
+            <div className="empty">
+              <div className="empty-icon">💬</div>
+              <div className="empty-title">No conversations yet</div>
+              <div className="empty-sub">Once you're connected with a mentor or mentee, you can chat here.</div>
+            </div>
+          ) : (
+            <div className="rel-list">
+              {conversations.map((conv: any) => {
+                const iAmMentee = conv.user_id === userId;
+                const otherName = iAmMentee ? conv.mentor_name : (conv.mentee_name || 'User');
+                const otherInitials = iAmMentee ? conv.mentor_initials : (conv.mentee_initials || '?');
+                const otherPhoto = iAmMentee ? (conv.mentor_photo || '') : (conv.mentee_photo || '');
+                const otherGrad = iAmMentee
+                  ? (conv.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)')
+                  : 'linear-gradient(135deg,#4a9b8e,#2d6a62)';
+                const unread = conv.unread_count || 0;
+                const lastMsg = conv.last_message;
+                const lastTime = conv.last_message_at
+                  ? new Date(conv.last_message_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                  : null;
+                return (
+                  <div
+                    key={conv.id}
+                    className="rel-card"
+                    style={{ cursor: 'pointer', background: unread > 0 ? 'rgba(201,168,76,0.07)' : undefined }}
+                    onClick={() => {
+                      setChatConn(conv);
+                      setConversations(prev => prev.map((c: any) => c.id === conv.id ? { ...c, unread_count: 0 } : c));
+                    }}
+                  >
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <Avatar photo={otherPhoto} initials={otherInitials} grad={otherGrad} size={44} radius={11} />
+                      {unread > 0 && (
+                        <span style={{
+                          position: 'absolute', top: -4, right: -4,
+                          background: 'var(--gold)', color: '#0d1b2a',
+                          borderRadius: '50%', width: 18, height: 18,
+                          fontSize: 10, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>{unread > 9 ? '9+' : unread}</span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="rel-name" style={{ fontWeight: unread > 0 ? 700 : undefined }}>
+                        {otherName}
+                        {conv.is_collab && <span style={{ fontSize: 10, color: 'var(--accent-teal)', marginLeft: 6, fontWeight: 400 }}>Collaborator</span>}
+                      </div>
+                      {lastMsg ? (
+                        <div className="rel-last" style={{
+                          color: unread > 0 ? 'var(--white)' : 'var(--text-dim)',
+                          fontWeight: unread > 0 ? 500 : undefined,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {conv.last_sender_id === userId ? 'You: ' : ''}{lastMsg}
+                        </div>
+                      ) : (
+                        <div className="rel-last" style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No messages yet — say hi!</div>
+                      )}
+                    </div>
+                    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      {lastTime && <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>{lastTime}</div>}
+                      <div className="rel-btn primary" style={{ fontSize: 12, padding: '4px 12px', cursor: 'pointer' }}>Chat</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
