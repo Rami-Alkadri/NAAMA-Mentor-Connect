@@ -2712,9 +2712,15 @@ export default function App() {
     return matchQuery && matchCat && matchLevel && matchState && matchIMG;
   });
 
+  const pendingSentRequests = [
+    ...myConnections.asMentee.filter((c: any) => c.status === 'pending'),
+    ...(isMentorMode ? myConnections.asMentor.filter((c: any) => c.status === 'pending') : []),
+  ];
+
   const tabs = [
     ['discover', 'Discover'],
     ['relationships', isMentorMode ? 'My Mentees' : 'My Mentors'],
+    ['requests', `Requests${pendingSentRequests.length > 0 ? ` (${pendingSentRequests.length})` : ''}`],
     ['schedule', 'Schedule'],
     ['profile', 'Profile'],
     ...(isAdmin ? [['admin', '⚙ Admin']] : []),
@@ -2922,6 +2928,64 @@ export default function App() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'requests' && (
+        <div className="page">
+          <div className="page-title" style={{ marginBottom: 6 }}>
+            <span>Sent Requests</span>
+          </div>
+          <div className="page-sub">
+            {isMentorMode
+              ? 'Pending collaboration requests you have sent to other mentors.'
+              : 'Pending connection requests you have sent to mentors.'}
+          </div>
+
+          {pendingSentRequests.length === 0 ? (
+            <div className="empty">
+              <div className="empty-icon">📤</div>
+              <div className="empty-title">No pending requests</div>
+              <div className="empty-sub">
+                {isMentorMode
+                  ? 'Collaboration requests you send will appear here until accepted.'
+                  : 'Connection requests you send will appear here until accepted.'}
+              </div>
+            </div>
+          ) : (
+            <div className="rel-list">
+              {pendingSentRequests.map((conn: any) => {
+                const isSentByMe = myConnections.asMentee.some((c: any) => c.id === conn.id);
+                const displayName = isSentByMe ? conn.mentor_name : (conn.mentee_name || 'Collaborator');
+                const displaySpecialty = isSentByMe ? conn.mentor_specialty : null;
+                const displayPhoto = isSentByMe ? (conn.mentor_photo || '') : (conn.mentee_photo || '');
+                const displayInitials = isSentByMe ? (conn.mentor_initials || '?') : (conn.mentee_initials || '?');
+                const displayGrad = isSentByMe
+                  ? (conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)')
+                  : 'linear-gradient(135deg,#4a9b8e,#2d6a62)';
+                const sentLabel = conn.is_collab ? 'Collaboration request' : 'Mentorship request';
+                return (
+                  <div key={conn.id} className="rel-card">
+                    <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
+                    <div style={{ flex: 1 }}>
+                      <div className="rel-name">{displayName}</div>
+                      {displaySpecialty && <div className="rel-role">{displaySpecialty}</div>}
+                      <div className="rel-last" style={{ color: 'var(--gold)' }}>⏳ {sentLabel} pending</div>
+                    </div>
+                    <div className="rel-actions">
+                      <button
+                        className="rel-btn secondary"
+                        style={{ borderColor: 'var(--error)', color: 'var(--error)' }}
+                        onClick={() => handleDeleteConnection(conn.id, 'Withdraw request')}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
