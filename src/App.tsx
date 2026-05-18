@@ -138,8 +138,7 @@ const styles = `
     .rel-btn { padding:6px 12px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; }
     .rel-btn.primary { background:var(--gold); color:var(--navy); }
     .rel-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--text-dim); }
-    .schedule-wrap { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    @media(max-width:700px){.schedule-wrap{grid-template-columns:1fr;}}
+    .schedule-wrap { display:flex; flex-direction:column; gap:14px; }
     .schedule-panel { background:var(--card-bg); border:1px solid var(--border); border-radius:18px; padding:22px; }
     .schedule-panel h3 { font-family:'Playfair Display',serif; font-size:16px; font-weight:600; color:var(--white); margin-bottom:16px; }
     .meeting-type-grid { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
@@ -148,27 +147,29 @@ const styles = `
     .meeting-type-btn:hover:not(.selected) { border-color:rgba(201,168,76,0.3); color:var(--white); }
     .meeting-type-name { font-size:12px; font-weight:600; display:block; }
     .meeting-type-dur { font-size:10px; color:var(--text-dim); }
-    .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:14px; }
-    .cal-header { font-size:9px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-dim); text-align:center; padding:3px 0; }
-    .cal-day { aspect-ratio:1; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; border:1px solid transparent; transition:all 0.18s; color:var(--text-dim); }
+    .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:14px; }
+    .cal-header { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); text-align:center; padding:4px 0; }
+    .cal-day { aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; border:1px solid transparent; transition:all 0.18s; color:var(--text-dim); }
     .cal-day.available { color:var(--white); }
     .cal-day.available:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
     .cal-day.selected { background:var(--gold); color:var(--navy); font-weight:700; border-color:var(--gold); }
     .cal-day.past { opacity:0.3; cursor:default; }
     .cal-day.empty { cursor:default; }
-    .time-slots { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:16px; }
-    .time-slot { padding:7px 4px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); font-size:11px; cursor:pointer; text-align:center; transition:all 0.18s; }
+    .time-slots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+    .time-slot { padding:9px 6px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); font-size:12px; cursor:pointer; text-align:center; transition:all 0.18s; white-space:nowrap; }
     .time-slot.selected { background:var(--gold); color:var(--navy); font-weight:700; border-color:var(--gold); }
     .time-slot:hover:not(.selected) { border-color:rgba(201,168,76,0.4); color:var(--white); }
-    .schedule-btn { width:100%; padding:11px; background:var(--gold); color:var(--navy); border:none; border-radius:11px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+    .schedule-btn { width:100%; padding:12px; background:var(--gold); color:var(--navy); border:none; border-radius:11px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; }
     .schedule-btn:hover { background:var(--gold-light); }
     .schedule-btn:disabled { opacity:0.35; cursor:default; }
     .request-card { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:12px; }
     .request-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
     .request-name { font-family:'Playfair Display',serif; font-size:14px; font-weight:600; color:var(--white); }
     .request-meta { font-size:11px; color:var(--text-dim); margin-top:3px; }
-    .request-details { background:rgba(255,255,255,0.03); border-radius:10px; padding:10px 12px; font-size:11px; color:var(--text-dim); margin-bottom:12px; line-height:1.7; }
-    .request-details strong { color:var(--white); }
+    .request-details { background:rgba(255,255,255,0.03); border-radius:10px; padding:12px 14px; margin-bottom:12px; display:flex; flex-direction:column; gap:7px; }
+    .detail-row { display:flex; align-items:baseline; gap:10px; }
+    .detail-label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); font-weight:600; min-width:36px; flex-shrink:0; }
+    .detail-value { font-size:12px; color:var(--white); }
     .request-actions { display:flex; gap:8px; margin-top:10px; }
     .confirm-btn { flex:1; padding:9px; background:var(--accent-teal); color:var(--white); border:none; border-radius:9px; font-size:12px; font-weight:600; cursor:pointer; }
     .confirm-btn:hover { opacity:0.85; }
@@ -1408,17 +1409,10 @@ function ScheduleTab({
                 )}
               </div>
               <div className="request-details">
-                <strong>Type:</strong> {r.type}
-                <br />
-                <strong>Date:</strong> {r.date}
-                <br />
-                <strong>Time:</strong> {r.time}
-                <br />
-                {r.note && (
-                  <>
-                    <strong>Note:</strong> {r.note}
-                  </>
-                )}
+                <div className="detail-row"><span className="detail-label">Type</span><span className="detail-value">{r.type}</span></div>
+                <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{r.date}</span></div>
+                <div className="detail-row"><span className="detail-label">Time</span><span className="detail-value">{r.time}</span></div>
+                {r.note && <div className="detail-row"><span className="detail-label">Note</span><span className="detail-value">{r.note}</span></div>}
               </div>
               {r.status === 'confirmed' && (
                 <div className="request-actions">
@@ -1537,8 +1531,8 @@ function ScheduleTab({
                   <div className="cancelled-badge">✕ Cancelled</div>
                 </div>
                 <div className="request-details">
-                  <strong>Date:</strong> {r.date}<br />
-                  <strong>Time:</strong> {r.time}
+                  <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{r.date}</span></div>
+                  <div className="detail-row"><span className="detail-label">Time</span><span className="detail-value">{r.time}</span></div>
                 </div>
               </div>
             ))}
@@ -1593,9 +1587,9 @@ function ScheduleTab({
                 </div>
               </div>
               <div className="request-details">
-                <strong>Date:</strong> {r.date}<br />
-                <strong>Time:</strong> {r.time}
-                {r.note && <><br /><strong>Note:</strong> {r.note}</>}
+                <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{r.date}</span></div>
+                <div className="detail-row"><span className="detail-label">Time</span><span className="detail-value">{r.time}</span></div>
+                {r.note && <div className="detail-row"><span className="detail-label">Note</span><span className="detail-value">{r.note}</span></div>}
               </div>
               <div className="request-actions">
                 <button
@@ -1670,9 +1664,9 @@ function ScheduleTab({
                 <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600 }}>Pending</div>
               </div>
               <div className="request-details">
-                <strong>Date:</strong> {r.date}<br />
-                <strong>Time:</strong> {r.time}
-                {r.note && <><br /><strong>Note:</strong> {r.note}</>}
+                <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{r.date}</span></div>
+                <div className="detail-row"><span className="detail-label">Time</span><span className="detail-value">{r.time}</span></div>
+                {r.note && <div className="detail-row"><span className="detail-label">Note</span><span className="detail-value">{r.note}</span></div>}
               </div>
             </div>
           ))}
@@ -1691,8 +1685,8 @@ function ScheduleTab({
                 </div>
               </div>
               <div className="request-details">
-                <strong>Date:</strong> {r.date}<br />
-                <strong>Time:</strong> {r.time}
+                <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{r.date}</span></div>
+                <div className="detail-row"><span className="detail-label">Time</span><span className="detail-value">{r.time}</span></div>
               </div>
             </div>
           ))}
