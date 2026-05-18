@@ -410,7 +410,12 @@ app.put('/api/profiles/:id', async (req, res) => {
 
 app.delete('/api/profiles/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM user_profiles WHERE id = $1', [req.params.id]);
+    const id = req.params.id;
+    // Cascade: remove dependent rows before deleting the profile
+    await pool.query('DELETE FROM schedule_requests WHERE user_profile_id = $1', [id]);
+    await pool.query('DELETE FROM connections WHERE user_profile_id = $1', [id]);
+    await pool.query('UPDATE users SET profile_id = NULL WHERE profile_id = $1', [id]);
+    await pool.query('DELETE FROM user_profiles WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -423,10 +428,11 @@ app.post('/api/connections', optionalAuth, async (req, res) => {
   try {
     const { user_profile_id, mentor_id } = req.body;
     const userId = req.user?.userId || null;
+    const { is_collab } = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO connections (user_profile_id, mentor_id, user_id, status) VALUES ($1,$2,$3,'pending')
+      `INSERT INTO connections (user_profile_id, mentor_id, user_id, status, is_collab) VALUES ($1,$2,$3,'pending',$4)
        ON CONFLICT DO NOTHING RETURNING *`,
-      [user_profile_id, mentor_id, userId]
+      [user_profile_id, mentor_id, userId, is_collab ? true : false]
     );
     await pool.query('UPDATE mentors SET mentees_count = mentees_count + 1 WHERE id = $1', [mentor_id]);
 
@@ -495,13 +501,16 @@ app.post('/api/connections', optionalAuth, async (req, res) => {
 
 app.get('/api/connections/mine', authMiddleware, async (req, res) => {
   try {
-    const cols = `c.id, c.user_profile_id, c.mentor_id, c.user_id, c.status, c.created_at,
+    const cols = `c.id, c.user_profile_id, c.mentor_id, c.user_id, c.status, c.created_at, c.is_collab,
       m.name as mentor_name, m.specialty as mentor_specialty, m.institution as mentor_institution,
       m.avatar_grad as mentor_avatar_grad, m.photo as mentor_photo, m.initials as mentor_initials,
       m.linked_user_id as mentor_linked_user_id,
       COALESCE(m.is_active, true) as mentor_is_active,
       up.name as mentee_name, up.initials as mentee_initials, up.photo as mentee_photo,
-      COALESCE(u_mentee.is_active, true) as mentee_is_active`;
+      COALESCE(u_mentee.is_active, true) as mentee_is_active,
+      mc.name as collab_mentor_name, mc.specialty as collab_mentor_specialty,
+      mc.photo as collab_mentor_photo, mc.initials as collab_mentor_initials,
+      mc.avatar_grad as collab_mentor_avatar_grad`;
 
     const [asMentee, asMentor] = await Promise.all([
       pool.query(
@@ -509,6 +518,7 @@ app.get('/api/connections/mine', authMiddleware, async (req, res) => {
          JOIN mentors m ON c.mentor_id = m.id
          LEFT JOIN user_profiles up ON c.user_profile_id = up.id
          LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
+         LEFT JOIN mentors mc ON mc.linked_user_id = c.user_id
          WHERE c.user_id = $1 ORDER BY c.created_at DESC`,
         [req.user.userId]
       ),
@@ -517,6 +527,7 @@ app.get('/api/connections/mine', authMiddleware, async (req, res) => {
          JOIN mentors m ON c.mentor_id = m.id
          LEFT JOIN user_profiles up ON c.user_profile_id = up.id
          LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
+         LEFT JOIN mentors mc ON mc.linked_user_id = c.user_id
          WHERE m.linked_user_id = $1 ORDER BY c.created_at DESC`,
         [req.user.userId]
       ),
@@ -673,12 +684,15 @@ app.post('/api/schedule-requests', async (req, res) => {
 
 app.get('/api/schedule-requests', async (req, res) => {
   try {
-    const { user_profile_id } = req.query;
+    const { user_profile_id, mentor_user_id } = req.query;
     let query = 'SELECT * FROM schedule_requests';
     const params = [];
     if (user_profile_id) {
       query += ' WHERE user_profile_id = $1';
       params.push(user_profile_id);
+    } else if (mentor_user_id) {
+      query += ' WHERE mentor_user_id = $1';
+      params.push(mentor_user_id);
     }
     query += ' ORDER BY created_at DESC';
     const { rows } = await pool.query(query, params);
@@ -854,6 +868,7 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS year_set_date DATE DEFAULT CURRENT_DATE`);
     await pool.query(`ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS mentor_user_id INTEGER`);
     await pool.query(`ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS cancelled_by VARCHAR(20)`);
+    await pool.query(`ALTER TABLE connections ADD COLUMN IF NOT EXISTS is_collab BOOLEAN DEFAULT false`);
 
     // Step 1: Delete connections for mentors whose linked user account is gone
     // (must happen BEFORE deleting the mentor rows to satisfy the FK constraint)

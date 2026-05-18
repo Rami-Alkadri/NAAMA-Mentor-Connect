@@ -2435,6 +2435,7 @@ export default function App() {
   const [myConnections, setMyConnections] = useState<{ asMentee: any[]; asMentor: any[] }>({ asMentee: [], asMentor: [] });
   const [chatConn, setChatConn] = useState<any | null>(null);
   const [menteeConnTab, setMenteeConnTab] = useState<'active' | 'declined'>('active');
+  const [mentorConnTab, setMentorConnTab] = useState<'mentees' | 'collaborators'>('mentees');
   const [selectedMentor, setSelectedMentor] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [toastMsg, setToastMsg] = useState('');
@@ -2493,8 +2494,8 @@ export default function App() {
   const fetchScheduleRequests = () => {
     if (!profile) return;
     const isMentorMode = profile.role === 'both' ? activeMode === 'mentor' : profile.role === 'mentor';
-    if (isMentorMode) {
-      fetch('/api/schedule-requests')
+    if (isMentorMode && userId) {
+      fetch(`/api/schedule-requests?mentor_user_id=${userId}`)
         .then(r => r.json())
         .then(data => { if (Array.isArray(data)) setRequests(data); })
         .catch(() => {});
@@ -2947,49 +2948,136 @@ export default function App() {
             </div>
           )}
 
-          {isMentorMode ? (
-            myConnections.asMentor.length === 0 ? (
-              <div className="empty">
-                <div className="empty-icon">🩺</div>
-                <div className="empty-title">No mentees yet</div>
-                <div className="empty-sub">When mentees connect with you, they'll appear here.</div>
-              </div>
-            ) : (
-              <div className="rel-list">
-                {myConnections.asMentor.map((conn: any) => (
-                  <div key={conn.id} className="rel-card">
-                    {conn.status === 'accepted' && (
-                      <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
-                    )}
-                    <Avatar
-                      photo={conn.mentee_photo || ''}
-                      initials={conn.mentee_initials || '?'}
-                      grad="linear-gradient(135deg,#4a9b8e,#2d6a62)"
-                      size={44}
-                      radius={11}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div className="rel-name">{conn.mentee_name || 'Mentee'}</div>
-                      <div className="rel-last" style={{ color: !conn.mentee_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                        {!conn.mentee_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : conn.status === 'declined' ? 'Declined' : '⏳ Pending your acceptance'}
-                      </div>
+          {isMentorMode ? (() => {
+            const regularMentees = myConnections.asMentor.filter((c: any) => !c.is_collab);
+            // Collaborators = received collabs (asMentor) + sent collabs (asMentee)
+            const receivedCollabs = myConnections.asMentor.filter((c: any) => c.is_collab);
+            const sentCollabs = myConnections.asMentee.filter((c: any) => c.is_collab);
+            const allCollabs = [...receivedCollabs, ...sentCollabs];
+            return (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                  {(['mentees', 'collaborators'] as const).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setMentorConnTab(t)}
+                      style={{
+                        padding: '6px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+                        background: mentorConnTab === t ? 'var(--gold)' : 'rgba(255,255,255,0.07)',
+                        color: mentorConnTab === t ? '#0d1b2a' : 'var(--text-dim)',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {t === 'mentees' ? `My Mentees (${regularMentees.length})` : `My Collaborators (${allCollabs.length})`}
+                    </button>
+                  ))}
+                </div>
+
+                {mentorConnTab === 'mentees' ? (
+                  regularMentees.length === 0 ? (
+                    <div className="empty">
+                      <div className="empty-icon">🩺</div>
+                      <div className="empty-title">No mentees yet</div>
+                      <div className="empty-sub">When mentees connect with you, they'll appear here.</div>
                     </div>
-                    <div className="rel-actions">
-                      {conn.status === 'pending' && conn.mentee_is_active && (
-                        <>
-                          <button className="rel-btn primary" onClick={() => handleConnectionStatus(conn.id, 'accepted')}>Accept</button>
-                          <button className="rel-btn secondary" onClick={() => handleConnectionStatus(conn.id, 'declined')}>Decline</button>
-                        </>
-                      )}
-                      {conn.status === 'accepted' && conn.mentee_is_active && (
-                        <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
-                      )}
+                  ) : (
+                    <div className="rel-list">
+                      {regularMentees.map((conn: any) => (
+                        <div key={conn.id} className="rel-card">
+                          {conn.status === 'accepted' && (
+                            <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
+                          )}
+                          <Avatar
+                            photo={conn.mentee_photo || ''}
+                            initials={conn.mentee_initials || '?'}
+                            grad="linear-gradient(135deg,#4a9b8e,#2d6a62)"
+                            size={44}
+                            radius={11}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div className="rel-name">{conn.mentee_name || 'Mentee'}</div>
+                            <div className="rel-last" style={{ color: !conn.mentee_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                              {!conn.mentee_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : conn.status === 'declined' ? 'Declined' : '⏳ Pending your acceptance'}
+                            </div>
+                          </div>
+                          <div className="rel-actions">
+                            {conn.status === 'pending' && conn.mentee_is_active && (
+                              <>
+                                <button className="rel-btn primary" onClick={() => handleConnectionStatus(conn.id, 'accepted')}>Accept</button>
+                                <button className="rel-btn secondary" onClick={() => handleConnectionStatus(conn.id, 'declined')}>Decline</button>
+                              </>
+                            )}
+                            {conn.status === 'accepted' && conn.mentee_is_active && (
+                              <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )
-          ) : (() => {
+                  )
+                ) : (
+                  allCollabs.length === 0 ? (
+                    <div className="empty">
+                      <div className="empty-icon">🤝</div>
+                      <div className="empty-title">No collaborators yet</div>
+                      <div className="empty-sub">Connect with other mentors to collaborate and grow together.</div>
+                    </div>
+                  ) : (
+                    <div className="rel-list">
+                      {allCollabs.map((conn: any) => {
+                        const isSent = !conn.collab_mentor_name && myConnections.asMentee.some((c: any) => c.id === conn.id);
+                        const displayName = isSent
+                          ? (conn.mentor_name || 'Collaborator')
+                          : (conn.collab_mentor_name || conn.mentee_name || 'Collaborator');
+                        const displaySpecialty = isSent
+                          ? conn.mentor_specialty
+                          : conn.collab_mentor_specialty;
+                        const displayPhoto = isSent
+                          ? (conn.mentor_photo || '')
+                          : (conn.collab_mentor_photo || conn.mentee_photo || '');
+                        const displayInitials = isSent
+                          ? (conn.mentor_initials || '?')
+                          : (conn.collab_mentor_initials || conn.mentee_initials || '?');
+                        const displayGrad = isSent
+                          ? (conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)')
+                          : (conn.collab_mentor_avatar_grad || 'linear-gradient(135deg,#4a9b8e,#2d6a62)');
+                        const isActive = isSent ? conn.mentor_is_active : conn.mentee_is_active;
+                        return (
+                          <div key={conn.id} className="rel-card">
+                            {conn.status === 'accepted' && (
+                              <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
+                            )}
+                            <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
+                            <div style={{ flex: 1 }}>
+                              <div className="rel-name">{displayName}</div>
+                              {displaySpecialty && <div className="rel-role">{displaySpecialty}</div>}
+                              <div className="rel-last" style={{ color: !isActive ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                                {!isActive ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : isSent ? '⏳ Awaiting acceptance' : '⏳ Pending your acceptance'}
+                              </div>
+                            </div>
+                            <div className="rel-actions">
+                              {conn.status === 'pending' && !isSent && isActive && (
+                                <>
+                                  <button className="rel-btn primary" onClick={() => handleConnectionStatus(conn.id, 'accepted')}>Accept</button>
+                                  <button className="rel-btn secondary" onClick={() => handleConnectionStatus(conn.id, 'declined')}>Decline</button>
+                                </>
+                              )}
+                              {conn.status === 'pending' && isSent && (
+                                <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)' }} onClick={() => handleDeleteConnection(conn.id, 'Withdraw request')}>Withdraw</button>
+                              )}
+                              {conn.status === 'accepted' && isActive && (
+                                <button className="rel-btn primary" onClick={() => setChatConn(conn)}>Chat</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                )}
+              </>
+            );
+          })() : (() => {
             const activeConns = myConnections.asMentee.filter((c: any) => c.status !== 'declined');
             const declinedConns = myConnections.asMentee.filter((c: any) => c.status === 'declined');
             return (
