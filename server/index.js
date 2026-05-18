@@ -718,16 +718,18 @@ app.post('/api/schedule-requests', async (req, res) => {
 app.get('/api/schedule-requests', async (req, res) => {
   try {
     const { user_profile_id, mentor_user_id } = req.query;
-    let query = 'SELECT * FROM schedule_requests';
+    let query = `SELECT sr.*, m.name as mentor_name, m.photo as mentor_photo, m.initials as mentor_initials, m.avatar_grad as mentor_avatar_grad
+                 FROM schedule_requests sr
+                 LEFT JOIN mentors m ON m.linked_user_id = sr.mentor_user_id`;
     const params = [];
     if (user_profile_id) {
-      query += ' WHERE user_profile_id = $1';
+      query += ' WHERE sr.user_profile_id = $1';
       params.push(user_profile_id);
     } else if (mentor_user_id) {
-      query += ' WHERE mentor_user_id = $1';
+      query += ' WHERE sr.mentor_user_id = $1';
       params.push(mentor_user_id);
     }
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY sr.created_at DESC';
     const { rows } = await pool.query(query, params);
     res.json(rows.map(r => ({
       id: r.id,
@@ -740,6 +742,10 @@ app.get('/api/schedule-requests', async (req, res) => {
       note: r.note,
       status: r.status,
       mentor_user_id: r.mentor_user_id,
+      mentorName: r.mentor_name || null,
+      mentorPhoto: r.mentor_photo || '',
+      mentorInitials: r.mentor_initials || '?',
+      mentorAvatarGrad: r.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)',
     })));
   } catch (e) {
     res.status(500).json({ error: e.message });

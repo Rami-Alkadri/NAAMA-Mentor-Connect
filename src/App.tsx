@@ -1581,10 +1581,20 @@ function ScheduleTab({
           {confirmedSessions.map((r: any, i: number) => (
             <div key={i} className="request-card" style={{ borderLeft: '3px solid var(--accent-teal)' }}>
               <div className="request-top">
+                {r.mentorName && (
+                  <Avatar
+                    photo={r.mentorPhoto || ''}
+                    initials={r.mentorInitials || '?'}
+                    grad={r.mentorAvatarGrad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
+                    size={40}
+                    radius={10}
+                  />
+                )}
                 <div style={{ flex: 1 }}>
-                  <div className="request-name" style={{ color: 'var(--accent-teal)' }}>✓ Confirmed</div>
+                  {r.mentorName && <div className="request-name">{r.mentorName}</div>}
                   <div className="request-meta">{r.type}</div>
                 </div>
+                <div className="confirmed-badge">✓ Confirmed</div>
               </div>
               <div className="request-details">
                 <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{r.date}</span></div>
