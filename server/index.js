@@ -811,6 +811,20 @@ app.delete('/api/schedule-requests/:id', async (req, res) => {
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 
+app.delete('/api/admin/clear-all-users', async (req, res) => {
+  if (req.query.secret !== 'naama-reset-2026') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    await pool.query('DELETE FROM schedule_requests');
+    await pool.query('DELETE FROM connections');
+    await pool.query('UPDATE users SET profile_id = NULL');
+    await pool.query('DELETE FROM user_profiles');
+    await pool.query('DELETE FROM users');
+    res.json({ success: true, message: 'All user accounts cleared.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/admin/dashboard', async (req, res) => {
   try {
     const [mentors, profiles, connections, requests] = await Promise.all([
