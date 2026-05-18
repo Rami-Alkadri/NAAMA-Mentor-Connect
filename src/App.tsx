@@ -186,6 +186,25 @@ const styles = `
     .reschedule-form .mt-dur { font-size:10px; color:var(--text-dim); }
     .confirmed-badge { font-size:11px; color:var(--accent-teal); font-weight:600; margin-left:auto; }
     .declined-badge { font-size:11px; color:var(--text-dim); font-weight:600; margin-left:auto; }
+    .bell-btn { position:relative; background:none; border:none; cursor:pointer; color:var(--white); padding:7px 8px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:background 0.2s; flex-shrink:0; }
+    .bell-btn:hover { background:rgba(255,255,255,0.09); }
+    .bell-icon { font-size:19px; line-height:1; }
+    .bell-badge { position:absolute; top:2px; right:2px; background:#e05a3a; color:#fff; border-radius:50%; min-width:16px; height:16px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; }
+    .notif-backdrop { position:fixed; inset:0; z-index:498; }
+    .notif-panel { position:fixed; top:64px; right:12px; width:310px; max-height:430px; overflow-y:auto; background:var(--navy-mid); border:1px solid var(--border); border-radius:16px; z-index:499; box-shadow:0 8px 32px rgba(0,0,0,0.55); }
+    .notif-header { padding:13px 16px 11px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .notif-title { font-size:13px; font-weight:700; color:var(--white); letter-spacing:0.3px; }
+    .notif-close { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:18px; padding:0; line-height:1; }
+    .notif-close:hover { color:var(--white); }
+    .notif-item { padding:12px 16px; border-bottom:1px solid rgba(201,168,76,0.07); cursor:pointer; display:flex; gap:11px; align-items:flex-start; transition:background 0.15s; }
+    .notif-item:last-child { border-bottom:none; }
+    .notif-item:hover { background:rgba(255,255,255,0.04); }
+    .notif-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+    .notif-dot.conn { background:var(--gold); }
+    .notif-dot.sched { background:var(--accent-teal); }
+    .notif-item-title { font-size:12px; font-weight:600; color:var(--white); margin-bottom:3px; }
+    .notif-item-sub { font-size:11px; color:var(--text-dim); line-height:1.4; }
+    .notif-empty { padding:28px 16px; text-align:center; color:var(--text-dim); font-size:12px; }
     .cancelled-badge { font-size:11px; color:var(--error); font-weight:600; margin-left:auto; }
     .rescheduled-badge { font-size:11px; color:var(--gold); font-weight:600; margin-left:auto; }
     .profile-header { background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:24px; display:flex; align-items:flex-start; gap:18px; margin-bottom:18px; }
@@ -2456,6 +2475,7 @@ export default function App() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const prevRequestsLen = useRef(0);
 
   useEffect(() => {
@@ -2512,8 +2532,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (tab === 'schedule') fetchScheduleRequests();
-  }, [tab, activeMode, profile, profileId]);
+    fetchScheduleRequests();
+  }, [tab, activeMode, profile?.role, userId, profileId]);
 
   useEffect(() => {
     if (requests.length > prevRequestsLen.current && requests.length > 0) {
@@ -2737,6 +2757,26 @@ export default function App() {
 
   const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unread_count || 0), 0);
 
+  const pendingConnNotifs = myConnections.asMentor.filter((c: any) => c.status === 'pending');
+  const pendingSchedNotifs = isMentorMode ? requests.filter((r: any) => r.status === 'pending') : [];
+  const notifications = [
+    ...pendingConnNotifs.map((c: any) => ({
+      id: `conn-${c.id}`,
+      type: 'conn' as const,
+      title: `New ${c.is_collab ? 'collaboration' : 'mentorship'} request`,
+      sub: `From ${c.mentee_name || 'a member'}`,
+      action: () => { setTab('relationships'); setShowNotifications(false); },
+    })),
+    ...pendingSchedNotifs.map((r: any) => ({
+      id: `sched-${r.id}`,
+      type: 'sched' as const,
+      title: 'New session request',
+      sub: `${r.mentee} · ${r.type}${r.date ? ` · ${r.date}` : ''}`,
+      action: () => { setTab('schedule'); setShowNotifications(false); },
+    })),
+  ];
+  const notifCount = notifications.length;
+
   const tabs = [
     ['discover', 'Discover'],
     ['relationships', isMentorMode ? 'My Mentees' : 'My Mentors'],
@@ -2774,6 +2814,10 @@ export default function App() {
             </button>
           ))}
         </div>
+        <button className="bell-btn" onClick={() => setShowNotifications(n => !n)} title="Notifications">
+          <span className="bell-icon">🔔</span>
+          {notifCount > 0 && <span className="bell-badge">{notifCount > 9 ? '9+' : notifCount}</span>}
+        </button>
         <div
           style={{
             display: 'flex',
@@ -3648,6 +3692,31 @@ export default function App() {
       )}
 
       {tab === 'admin' && isAdmin && <AdminPanel />}
+
+      {showNotifications && (
+        <>
+          <div className="notif-backdrop" onClick={() => setShowNotifications(false)} />
+          <div className="notif-panel">
+            <div className="notif-header">
+              <span className="notif-title">Notifications{notifCount > 0 ? ` (${notifCount})` : ''}</span>
+              <button className="notif-close" onClick={() => setShowNotifications(false)}>×</button>
+            </div>
+            {notifications.length === 0 ? (
+              <div className="notif-empty">No new notifications</div>
+            ) : (
+              notifications.map(n => (
+                <div key={n.id} className="notif-item" onClick={n.action}>
+                  <div className={`notif-dot ${n.type}`} />
+                  <div>
+                    <div className="notif-item-title">{n.title}</div>
+                    <div className="notif-item-sub">{n.sub}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
 
       {toastMsg && <div className="toast">{toastMsg}</div>}
     </div>

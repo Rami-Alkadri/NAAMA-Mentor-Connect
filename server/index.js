@@ -710,6 +710,37 @@ app.post('/api/schedule-requests', async (req, res) => {
       [r.mentee, r.menteeInitials, r.menteePhoto || '', r.user_profile_id || null, r.type, r.date, r.time, r.note || '', r.mentor_user_id || null]
     );
     res.status(201).json(rows[0]);
+
+    if (r.mentor_user_id) {
+      try {
+        const mentorRes = await pool.query(
+          `SELECT u.email, m.name FROM mentors m JOIN users u ON u.id = m.linked_user_id WHERE m.linked_user_id = $1`,
+          [r.mentor_user_id]
+        );
+        const mentor = mentorRes.rows[0];
+        if (mentor?.email) {
+          sendEmail(
+            mentor.email,
+            `New Session Request from ${r.mentee}`,
+            `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+              <h2 style="color:#c9a84c;margin-bottom:8px;">New Session Request</h2>
+              <p style="color:#8a9ab0;">Hi ${mentor.name},</p>
+              <p style="color:#8a9ab0;"><strong style="color:#fff">${r.mentee}</strong> has requested a session with you on NAAMA Mentor Connect.</p>
+              <table style="margin:16px 0;border-collapse:collapse;width:100%;">
+                <tr><td style="color:#8a9ab0;padding:4px 0;width:80px;">Type</td><td style="color:#fff;">${r.type}</td></tr>
+                <tr><td style="color:#8a9ab0;padding:4px 0;">Date</td><td style="color:#fff;">${r.date}</td></tr>
+                <tr><td style="color:#8a9ab0;padding:4px 0;">Time</td><td style="color:#fff;">${r.time}</td></tr>
+                ${r.note ? `<tr><td style="color:#8a9ab0;padding:4px 0;">Note</td><td style="color:#fff;">${r.note}</td></tr>` : ''}
+              </table>
+              <p style="color:#8a9ab0;">Log in to your dashboard to confirm or decline this request.</p>
+              <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+            </div>`
+          ).catch(() => {});
+        }
+      } catch (emailErr) {
+        console.error('Schedule request email error:', emailErr.message);
+      }
+    }
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
