@@ -2934,8 +2934,8 @@ export default function App() {
       )}
 
       {tab === 'collaborators' && isMentorMode && (() => {
-        const receivedCollabs = myConnections.asMentor.filter((c: any) => c.is_collab);
-        const sentCollabs = myConnections.asMentee.filter((c: any) => c.is_collab);
+        const receivedCollabs = myConnections.asMentor.filter((c: any) => c.is_collab).map((c: any) => ({ ...c, _isSent: false }));
+        const sentCollabs = myConnections.asMentee.filter((c: any) => c.is_collab).map((c: any) => ({ ...c, _isSent: true }));
         const allCollabs = [...receivedCollabs, ...sentCollabs];
         return (
           <div className="page">
@@ -2960,16 +2960,16 @@ export default function App() {
             ) : (
               <div className="rel-list">
                 {allCollabs.map((conn: any) => {
-                  const isSent = !conn.collab_mentor_name && myConnections.asMentee.some((c: any) => c.id === conn.id);
+                  const isSent: boolean = conn._isSent;
                   const displayName = isSent
                     ? (conn.mentor_name || 'Collaborator')
-                    : (conn.collab_mentor_name || conn.mentee_name || 'Collaborator');
-                  const displaySpecialty = isSent ? conn.mentor_specialty : conn.collab_mentor_specialty;
-                  const displayPhoto = isSent ? (conn.mentor_photo || '') : (conn.collab_mentor_photo || conn.mentee_photo || '');
-                  const displayInitials = isSent ? (conn.mentor_initials || '?') : (conn.collab_mentor_initials || conn.mentee_initials || '?');
+                    : (conn.mentee_name || 'Collaborator');
+                  const displaySpecialty = isSent ? conn.mentor_specialty : null;
+                  const displayPhoto = isSent ? (conn.mentor_photo || '') : (conn.mentee_photo || '');
+                  const displayInitials = isSent ? (conn.mentor_initials || '?') : (conn.mentee_initials || '?');
                   const displayGrad = isSent
                     ? (conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)')
-                    : (conn.collab_mentor_avatar_grad || 'linear-gradient(135deg,#4a9b8e,#2d6a62)');
+                    : 'linear-gradient(135deg,#4a9b8e,#2d6a62)';
                   const isActive = isSent ? conn.mentor_is_active : conn.mentee_is_active;
                   return (
                     <div key={conn.id} className="rel-card">
