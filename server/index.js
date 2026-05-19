@@ -563,6 +563,39 @@ app.put('/api/connections/:id/status', authMiddleware, async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
+
+    // Notify the mentee that their connection request was accepted or declined
+    pool.query(
+      `SELECT u_mentee.email as mentee_email, up.name as mentee_name,
+              m.name as mentor_name, m.specialty as mentor_specialty
+       FROM connections c
+       JOIN mentors m ON c.mentor_id = m.id
+       LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
+       LEFT JOIN user_profiles up ON up.id = c.user_profile_id
+       WHERE c.id = $1`,
+      [req.params.id]
+    ).then(({ rows: p }) => {
+      const party = p[0];
+      if (!party?.mentee_email) return;
+      const isAccepted = status === 'accepted';
+      const subjectLine = isAccepted
+        ? `Your mentorship request was accepted — ${party.mentor_name}`
+        : `Update on your mentorship request — ${party.mentor_name}`;
+      const html = `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+          <h2 style="color:${isAccepted ? '#c9a84c' : '#8a9ab0'};margin-bottom:8px;">
+            ${isAccepted ? 'Connection Accepted!' : 'Connection Not Accepted'}
+          </h2>
+          <p style="color:#8a9ab0;">Hi ${party.mentee_name || 'there'},</p>
+          ${isAccepted
+            ? `<p style="color:#8a9ab0;"><strong style="color:#fff">${party.mentor_name}</strong>${party.mentor_specialty ? ` (${party.mentor_specialty})` : ''} has accepted your mentorship request. You can now message them directly from your dashboard.</p>
+               <p style="color:#8a9ab0;">Log in to start the conversation and schedule your first session.</p>`
+            : `<p style="color:#8a9ab0;"><strong style="color:#fff">${party.mentor_name}</strong>${party.mentor_specialty ? ` (${party.mentor_specialty})` : ''} was unable to accept your request at this time. Don't be discouraged — browse the directory to find another mentor who may be a great fit.</p>`
+          }
+          <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+        </div>`;
+      sendEmail(party.mentee_email, subjectLine, html).catch(() => {});
+    }).catch(err => console.error('Connection status email error:', err.message));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -845,6 +878,26 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
         [status, req.params.id]
       );
       rows = result.rows;
+      // Send confirmation notification to mentee
+      if (status === 'confirmed') {
+        getScheduleParties(req.params.id).then(p => {
+          if (!p?.mentee_email) return;
+          const html = `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
+              <h2 style="color:#c9a84c;margin-bottom:8px;">Session Confirmed!</h2>
+              <p style="color:#8a9ab0;">Hi ${p.mentee_name || 'there'},</p>
+              <p style="color:#8a9ab0;"><strong style="color:#fff">${p.mentor_name || 'Your mentor'}</strong> has confirmed your upcoming session:</p>
+              <p style="color:#fff;margin:12px 0;">
+                <strong>Date:</strong> ${p.meeting_date}<br/>
+                <strong>Time:</strong> ${p.meeting_time}<br/>
+                <strong>Type:</strong> ${p.meeting_type}
+              </p>
+              <p style="color:#8a9ab0;">We look forward to seeing you there. You can view your session details from your dashboard.</p>
+              <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
+            </div>`;
+          sendEmail(p.mentee_email, `Your session is confirmed — ${p.mentor_name || 'NAAMA Mentor Connect'}`, html).catch(() => {});
+        }).catch(err => console.error('Session confirm email error:', err.message));
+      }
       // Send cancellation notifications
       if (status === 'cancelled') {
         const p = await getScheduleParties(req.params.id);
