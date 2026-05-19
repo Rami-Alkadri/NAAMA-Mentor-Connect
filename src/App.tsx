@@ -225,6 +225,18 @@ const styles = `
     .modal-name { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; color:var(--white); margin-bottom:2px; }
     .modal-role-text { font-size:12px; color:var(--gold-light); }
     .modal-subfield { font-size:11px; color:var(--text-dim); font-style:italic; margin-bottom:2px; }
+    .multi-spec-scroll { max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:10px 10px 6px; background:var(--navy-deep); }
+    .multi-spec-group { margin-bottom:8px; }
+    .multi-spec-group-label { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--gold); font-weight:600; margin-bottom:5px; }
+    .multi-spec-opts { display:flex; flex-wrap:wrap; gap:5px; }
+    .multi-spec-opt { font-size:11px; padding:3px 9px; border-radius:6px; background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; transition:all 0.15s; }
+    .multi-spec-opt:hover { border-color:var(--gold); color:var(--gold-light); }
+    .multi-spec-opt.selected { background:rgba(201,168,76,0.15); border-color:var(--gold); color:var(--gold-light); font-weight:600; }
+    .multi-spec-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+    .multi-spec-chip { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:3px 8px 3px 10px; border-radius:20px; background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.3); color:var(--gold-light); }
+    .multi-spec-chip button { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:13px; line-height:1; padding:0; display:flex; align-items:center; }
+    .multi-spec-chip button:hover { color:var(--white); }
+    .spec-chip-profile { display:inline-block; font-size:11px; padding:3px 10px; border-radius:20px; background:rgba(26,168,134,0.12); border:1px solid rgba(26,168,134,0.25); color:var(--accent-teal); margin:2px 2px 0 0; }
     .modal-inst { font-size:11px; color:var(--text-dim); margin-bottom:14px; }
     .modal-divider { height:1px; background:var(--border); margin:12px 0; }
     .modal-sec { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--gold); font-weight:600; margin-bottom:7px; }
@@ -810,6 +822,7 @@ type Profile = {
   category: string;
   specialty: string;
   subfield: string;
+  specialties: string[];
   level: string;
   institution: string;
   state: string;
@@ -882,14 +895,61 @@ function SpecialtyDropdown({
   );
 }
 
+function MultiSpecialtyPicker({
+  category,
+  values,
+  onChange,
+}: {
+  category: string;
+  values: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const groups = SPECIALTIES[category] || [];
+  if (!groups.length) return null;
+  const toggle = (opt: string) =>
+    onChange(values.includes(opt) ? values.filter((v) => v !== opt) : [...values, opt]);
+  return (
+    <div>
+      <div className="multi-spec-scroll">
+        {groups.map((g) => (
+          <div key={g.group} className="multi-spec-group">
+            <div className="multi-spec-group-label">{g.group}</div>
+            <div className="multi-spec-opts">
+              {g.options.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`multi-spec-opt${values.includes(opt) ? ' selected' : ''}`}
+                  onClick={() => toggle(opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {values.length > 0 && (
+        <div className="multi-spec-chips">
+          {values.map((v) => (
+            <span key={v} className="multi-spec-chip">
+              {v}
+              <button type="button" onClick={() => toggle(v)}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
   const [step, setStep] = useState(0);
   const [role, setRole] = useState('');
   const [photo, setPhoto] = useState('');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
-  const [specialty, setSpecialty] = useState('');
-  const [subfield, setSubfield] = useState('');
+  const [specialties, setSpecialties] = useState<string[]>([]);
   const [level, setLevel] = useState('');
   const [institution, setInstitution] = useState('');
   const [state, setState] = useState('');
@@ -915,8 +975,9 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
       role,
       name,
       category,
-      specialty,
-      subfield,
+      specialty: specialties[0] || '',
+      subfield: '',
+      specialties,
       level,
       institution,
       state,
@@ -1097,8 +1158,7 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
                     }`}
                     onClick={() => {
                       setCategory(c.id);
-                      setSpecialty('');
-                      setSubfield('');
+                      setSpecialties([]);
                       setTags([]);
                     }}
                   >
@@ -1111,32 +1171,14 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
             {category && (
               <>
                 <div className="form-group">
-                  <label className="form-label">Specialty / Area</label>
-                  <SpecialtyDropdown
-                    category={category}
-                    value={specialty}
-                    onChange={setSpecialty}
-                  />
-                </div>
-                <div className="form-group">
                   <label className="form-label">
-                    Sub-headline{' '}
-                    <span
-                      style={{
-                        color: 'var(--text-dim)',
-                        fontWeight: 400,
-                        textTransform: 'none',
-                        letterSpacing: 0,
-                      }}
-                    >
-                      (optional)
-                    </span>
+                    Specialties / Subspecialties
+                    <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}> — select all that apply</span>
                   </label>
-                  <input
-                    className="form-input"
-                    placeholder="e.g. OB Hospital Medicine, Pediatric Cardiology..."
-                    value={subfield}
-                    onChange={(e) => setSubfield(e.target.value)}
+                  <MultiSpecialtyPicker
+                    category={category}
+                    values={specialties}
+                    onChange={setSpecialties}
                   />
                 </div>
                 <div className="form-group">
@@ -1199,7 +1241,7 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
             )}
             <button
               className="onboard-btn"
-              disabled={!category || !specialty || !level}
+              disabled={!category || !specialties.length || !level}
               onClick={() => setStep(3)}
             >
               Continue →
@@ -1266,6 +1308,8 @@ function SearchBar({
   setQuery,
   categoryFilter,
   setCategoryFilter,
+  specialtyFilter,
+  setSpecialtyFilter,
   levelFilter,
   setLevelFilter,
   stateFilter,
@@ -1274,6 +1318,7 @@ function SearchBar({
   setImgOnly,
   onClear,
 }: any) {
+  const specialtyGroups = categoryFilter ? (SPECIALTIES[categoryFilter] || []) : Object.values(SPECIALTIES).flat();
   return (
     <div className="search-wrap">
       <div className="search-input-wrap">
@@ -1289,13 +1334,27 @@ function SearchBar({
         <select
           className="filter-select"
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onChange={(e) => { setCategoryFilter(e.target.value); setSpecialtyFilter(''); }}
         >
           <option value="">All Fields</option>
           {CATEGORIES.map((c) => (
             <option key={c.id} value={c.id}>
               {c.icon} {c.label}
             </option>
+          ))}
+        </select>
+        <select
+          className="filter-select"
+          value={specialtyFilter}
+          onChange={(e) => setSpecialtyFilter(e.target.value)}
+        >
+          <option value="">All Specialties</option>
+          {specialtyGroups.map((g: { group: string; options: string[] }) => (
+            <optgroup key={g.group} label={g.group}>
+              {g.options.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <select
@@ -1328,7 +1387,7 @@ function SearchBar({
         >
           🌐 IMG
         </button>
-        {(query || categoryFilter || levelFilter || stateFilter || imgOnly) && (
+        {(query || categoryFilter || specialtyFilter || levelFilter || stateFilter || imgOnly) && (
           <button className="clear-btn" onClick={onClear}>
             ✕ Clear
           </button>
@@ -1838,8 +1897,7 @@ function ScheduleTab({
 function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile: Profile; profileId: number | null; authToken: string | null; saving: boolean; error: string; onSave: (p: Profile) => void; onClose: () => void; }) {
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio || '');
-  const [specialty, setSpecialty] = useState(profile.specialty);
-  const [subfield, setSubfield] = useState(profile.subfield);
+  const [specialties, setSpecialties] = useState<string[]>(profile.specialties?.length ? profile.specialties : profile.specialty ? [profile.specialty] : []);
   const [level, setLevel] = useState(profile.level);
   const [year, setYear] = useState(profile.year);
   const [institution, setInstitution] = useState(profile.institution);
@@ -1864,7 +1922,7 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
 
   const handleSave = () => {
     if (!name.trim()) return;
-    onSave({ ...profile, name: name.trim(), initials, bio, specialty, subfield, level, year, institution, state, isIMG, tags, photo });
+    onSave({ ...profile, name: name.trim(), initials, bio, specialty: specialties[0] || '', subfield: '', specialties, level, year, institution, state, isIMG, tags, photo });
   };
 
   return (
@@ -1894,12 +1952,8 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
           <textarea className="form-input" rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell mentors or mentees a bit about yourself, your background, and what you're looking for..." style={{ resize: 'none' }} />
         </div>
         <div className="form-group">
-          <label className="form-label">Specialty / Area</label>
-          <SpecialtyDropdown category={profile.category} value={specialty} onChange={setSpecialty} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Sub-headline <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-          <input className="form-input" value={subfield} onChange={e => setSubfield(e.target.value)} placeholder="e.g. Pediatric Cardiology..." />
+          <label className="form-label">Specialties / Subspecialties <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>— select all that apply</span></label>
+          <MultiSpecialtyPicker category={profile.category} values={specialties} onChange={setSpecialties} />
         </div>
         <div className="form-group">
           <label className="form-label">Current Level</label>
@@ -2463,6 +2517,7 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState('');
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [specialtyFilter, setSpecialtyFilter] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
   const [imgOnly, setImgOnly] = useState(false);
@@ -2493,7 +2548,9 @@ export default function App() {
             const p = data.profile;
             setProfile({
               role: p.role, name: p.name, category: p.category, specialty: p.specialty,
-              subfield: p.subfield || '', level: p.level, institution: p.institution || '',
+              subfield: p.subfield || '',
+              specialties: p.specialties || (p.specialty ? [p.specialty] : []),
+              level: p.level, institution: p.institution || '',
               state: p.state || '', year: p.year || '', isIMG: p.is_img || false,
               tags: p.tags || [], initials: p.initials || '', avatarGrad: p.avatar_grad || '',
               photo: p.photo || '', bio: p.bio || '',
@@ -2679,6 +2736,7 @@ export default function App() {
           setProfile({
             role: savedProfile.role, name: savedProfile.name, category: savedProfile.category,
             specialty: savedProfile.specialty, subfield: savedProfile.subfield || '',
+            specialties: savedProfile.specialties || (savedProfile.specialty ? [savedProfile.specialty] : []),
             level: savedProfile.level, institution: savedProfile.institution || '',
             state: savedProfile.state || '', year: savedProfile.year || '',
             isIMG: savedProfile.is_img || false, tags: savedProfile.tags || [],
@@ -2742,12 +2800,16 @@ export default function App() {
       s(m.state).includes(q) ||
       s(m.bio).includes(q) ||
       (Array.isArray(m.tags) && m.tags.some((t: string) => s(t).includes(q))) ||
+      (Array.isArray(m.specialties) && m.specialties.some((sp: string) => s(sp).includes(q))) ||
       (m.isIMG && 'img'.includes(q));
     const matchCat = !categoryFilter || m.category === categoryFilter;
+    const matchSpecialty = !specialtyFilter ||
+      (Array.isArray(m.specialties) && m.specialties.includes(specialtyFilter)) ||
+      m.specialty === specialtyFilter;
     const matchLevel = !levelFilter || m.level === levelFilter;
     const matchState = !stateFilter || s(m.state) === s(stateFilter);
     const matchIMG = !imgOnly || m.isIMG;
-    return matchQuery && matchCat && matchLevel && matchState && matchIMG;
+    return matchQuery && matchCat && matchSpecialty && matchLevel && matchState && matchIMG;
   });
 
   const pendingSentRequests = [
@@ -2877,6 +2939,8 @@ export default function App() {
             setQuery={setQuery}
             categoryFilter={categoryFilter}
             setCategoryFilter={setCategoryFilter}
+            specialtyFilter={specialtyFilter}
+            setSpecialtyFilter={setSpecialtyFilter}
             levelFilter={levelFilter}
             setLevelFilter={setLevelFilter}
             stateFilter={stateFilter}
@@ -2886,6 +2950,7 @@ export default function App() {
             onClear={() => {
               setQuery('');
               setCategoryFilter('');
+              setSpecialtyFilter('');
               setLevelFilter('');
               setStateFilter('');
               setImgOnly(false);
@@ -2934,9 +2999,12 @@ export default function App() {
                       <div className="mentor-role-text">
                         {m.level || m.role}
                       </div>
-                      {m.specialty && (
-                        <div className="mentor-subfield">{m.specialty}</div>
-                      )}
+                      {(() => {
+                        const specs = Array.isArray(m.specialties) && m.specialties.length ? m.specialties : m.specialty ? [m.specialty] : [];
+                        return specs.length > 0 ? (
+                          <div className="mentor-subfield">{specs.slice(0, 2).join(' · ')}{specs.length > 2 ? ` +${specs.length - 2}` : ''}</div>
+                        ) : null;
+                      })()}
                       <div className="mentor-inst">
                         {m.institution} {m.state && `· ${m.state}`}
                       </div>
@@ -3418,12 +3486,14 @@ export default function App() {
               {profile.level && (
                 <div className="profile-subfield">{profile.level}</div>
               )}
-              {profile.specialty && (
-                <div className="profile-subfield">{profile.specialty}</div>
-              )}
-              {profile.subfield && (
-                <div className="profile-subfield">{profile.subfield}</div>
-              )}
+              {(() => {
+                const specs = profile.specialties?.length ? profile.specialties : profile.specialty ? [profile.specialty] : [];
+                return specs.length > 0 ? (
+                  <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
+                    {specs.map((s) => <span key={s} className="spec-chip-profile">{s}</span>)}
+                  </div>
+                ) : null;
+              })()}
               <div className="profile-inst">
                 {profile.institution}
                 {profile.state && ` · ${profile.state}`}
@@ -3634,9 +3704,16 @@ export default function App() {
                 {(selectedMentor.level || selectedMentor.role) && (
                   <div className="modal-role-text">
                     {selectedMentor.level || selectedMentor.role}
-                    {selectedMentor.specialty ? ` · ${selectedMentor.specialty}` : ''}
                   </div>
                 )}
+                {(() => {
+                  const specs = Array.isArray(selectedMentor.specialties) && selectedMentor.specialties.length ? selectedMentor.specialties : selectedMentor.specialty ? [selectedMentor.specialty] : [];
+                  return specs.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
+                      {specs.map((s: string) => <span key={s} className="spec-chip-profile">{s}</span>)}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="modal-inst">
                   {selectedMentor.institution}
                   {selectedMentor.state && ` · ${selectedMentor.state}`}

@@ -158,9 +158,9 @@ app.put('/api/auth/link-profile', authMiddleware, async (req, res) => {
       const existing = await pool.query('SELECT id FROM mentors WHERE linked_user_id = $1', [req.user.userId]);
       if (!existing.rows.length) {
         await pool.query(
-          `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, is_img, avatar_grad, photo, linked_user_id, match_score, years_exp, year_set_date, mentees_count, sessions_count)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,$16,CURRENT_DATE,0,0)`,
-          [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield || '', p.institution || '', p.state || '', p.bio || '', p.tags || [], p.is_img, p.avatar_grad || '', p.photo || '', req.user.userId, parseInt(p.year) || 0]
+          `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, is_img, avatar_grad, photo, linked_user_id, match_score, years_exp, year_set_date, mentees_count, sessions_count, specialties)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,85,$16,CURRENT_DATE,0,0,$17)`,
+          [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield || '', p.institution || '', p.state || '', p.bio || '', p.tags || [], p.is_img, p.avatar_grad || '', p.photo || '', req.user.userId, parseInt(p.year) || 0, p.specialties || []]
         );
       }
     }
@@ -305,9 +305,9 @@ app.post('/api/mentors', async (req, res) => {
   try {
     const m = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, match_score, years_exp, mentees_count, sessions_count, is_img, avatar_grad, photo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
-      [m.name, m.initials, m.role, m.level, m.category, m.specialty, m.subfield, m.institution, m.state, m.bio, m.tags || [], m.match_score || 90, m.years_exp || 0, m.mentees_count || 0, m.sessions_count || 0, m.is_img || false, m.avatar_grad || '', m.photo || '']
+      `INSERT INTO mentors (name, initials, role, level, category, specialty, subfield, institution, state, bio, tags, match_score, years_exp, mentees_count, sessions_count, is_img, avatar_grad, photo, specialties)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+      [m.name, m.initials, m.role, m.level, m.category, m.specialty, m.subfield, m.institution, m.state, m.bio, m.tags || [], m.match_score || 90, m.years_exp || 0, m.mentees_count || 0, m.sessions_count || 0, m.is_img || false, m.avatar_grad || '', m.photo || '', m.specialties || []]
     );
     res.status(201).json(formatMentor(rows[0]));
   } catch (e) {
@@ -319,8 +319,8 @@ app.put('/api/mentors/:id', async (req, res) => {
   try {
     const m = req.body;
     const { rows } = await pool.query(
-      `UPDATE mentors SET name=$1, initials=$2, role=$3, level=$4, category=$5, specialty=$6, subfield=$7, institution=$8, state=$9, bio=$10, tags=$11, match_score=$12, years_exp=$13, mentees_count=$14, sessions_count=$15, is_img=$16, avatar_grad=$17, photo=$18 WHERE id=$19 RETURNING *`,
-      [m.name, m.initials, m.role, m.level, m.category, m.specialty, m.subfield, m.institution, m.state, m.bio, m.tags || [], m.match_score || 90, m.years_exp || 0, m.mentees_count || 0, m.sessions_count || 0, m.is_img || false, m.avatar_grad || '', m.photo || '', req.params.id]
+      `UPDATE mentors SET name=$1, initials=$2, role=$3, level=$4, category=$5, specialty=$6, subfield=$7, institution=$8, state=$9, bio=$10, tags=$11, match_score=$12, years_exp=$13, mentees_count=$14, sessions_count=$15, is_img=$16, avatar_grad=$17, photo=$18, specialties=$19 WHERE id=$20 RETURNING *`,
+      [m.name, m.initials, m.role, m.level, m.category, m.specialty, m.subfield, m.institution, m.state, m.bio, m.tags || [], m.match_score || 90, m.years_exp || 0, m.mentees_count || 0, m.sessions_count || 0, m.is_img || false, m.avatar_grad || '', m.photo || '', m.specialties || [], req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(formatMentor(rows[0]));
@@ -348,6 +348,7 @@ function formatMentor(r) {
     category: r.category,
     specialty: r.specialty,
     subfield: r.subfield,
+    specialties: r.specialties || [],
     institution: r.institution,
     state: r.state,
     bio: r.bio,
@@ -369,9 +370,9 @@ app.post('/api/profiles', async (req, res) => {
   try {
     const p = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO user_profiles (name, initials, role, category, specialty, subfield, level, year, tags, state, institution, is_img, avatar_grad, photo, bio)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '']
+      `INSERT INTO user_profiles (name, initials, role, category, specialty, subfield, level, year, tags, state, institution, is_img, avatar_grad, photo, bio, specialties)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', p.specialties || []]
     );
     res.status(201).json(rows[0]);
   } catch (e) {
@@ -392,9 +393,9 @@ app.put('/api/profiles/:id', async (req, res) => {
   try {
     const p = req.body;
     const { rows } = await pool.query(
-      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14, bio=$15, year_set_date=CURRENT_DATE
-       WHERE id=$16 RETURNING *`,
-      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', req.params.id]
+      `UPDATE user_profiles SET name=$1, initials=$2, role=$3, category=$4, specialty=$5, subfield=$6, level=$7, year=$8, tags=$9, state=$10, institution=$11, is_img=$12, avatar_grad=$13, photo=$14, bio=$15, year_set_date=CURRENT_DATE, specialties=$16
+       WHERE id=$17 RETURNING *`,
+      [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', p.specialties || [], req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     // Sync years_exp and year_set_date on the linked mentor row if one exists
@@ -940,6 +941,8 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS mentor_user_id INTEGER`);
     await pool.query(`ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS cancelled_by VARCHAR(20)`);
     await pool.query(`ALTER TABLE connections ADD COLUMN IF NOT EXISTS is_collab BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT '{}'`);
+    await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT '{}'`);
 
     // Step 1: Delete connections for mentors whose linked user account is gone
     // (must happen BEFORE deleting the mentor rows to satisfy the FK constraint)
