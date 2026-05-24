@@ -7,7 +7,7 @@ const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
     * { box-sizing:border-box; margin:0; padding:0; }
     :root {
-      --navy:#0d1b2a; --navy-mid:#1a2e45; --navy-deep:#0a1520;
+      --navy:#1e3a5f; --navy-mid:#264d7a; --navy-deep:#172f4e;
       --gold:#c9a84c; --gold-light:#e8c97a;
       --text-dim:#8a9ab0; --accent-teal:#4a9b8e; --white:#ffffff;
       --card-bg:rgba(255,255,255,0.04); --border:rgba(201,168,76,0.2); --error:#e05a3a;
@@ -256,7 +256,7 @@ const styles = `
     .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--accent-teal); color:var(--white); padding:10px 20px; border-radius:100px; font-size:12px; font-weight:600; z-index:300; box-shadow:0 8px 24px rgba(0,0,0,0.3); animation:slideUp 0.3s ease; white-space:nowrap; }
     @keyframes slideUp { from{opacity:0;transform:translateX(-50%) translateY(14px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
 
-    html, body { background:#0d1b2a; overflow-x:hidden; margin:0; padding:0; }
+    html, body { background:#1e3a5f; overflow-x:hidden; margin:0; padding:0; }
     #root { overflow-x:hidden; }
 
     @media (max-width: 640px) {
@@ -3356,7 +3356,7 @@ export default function App() {
                       style={{
                         padding: '6px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
                         background: menteeConnTab === t ? 'var(--gold)' : 'rgba(255,255,255,0.07)',
-                        color: menteeConnTab === t ? '#0d1b2a' : 'var(--text-dim)',
+                        color: menteeConnTab === t ? '#1e3a5f' : 'var(--text-dim)',
                         transition: 'all 0.2s',
                       }}
                     >
@@ -3482,7 +3482,7 @@ export default function App() {
                       {unread > 0 && (
                         <span style={{
                           position: 'absolute', top: -4, right: -4,
-                          background: 'var(--gold)', color: '#0d1b2a',
+                          background: 'var(--gold)', color: '#1e3a5f',
                           borderRadius: '50%', width: 18, height: 18,
                           fontSize: 10, fontWeight: 700,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
