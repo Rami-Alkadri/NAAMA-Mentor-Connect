@@ -82,6 +82,14 @@ const styles = `
     .nav-tabs { display:flex; gap:4px; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:4px; justify-content:center; min-width:0; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
     .nav-tabs::-webkit-scrollbar { display:none; }
     .nav-tab { padding:7px 16px; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; border:none; background:transparent; color:var(--text-dim); transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
+    /* At narrower widths where tabs don't fit on one row, drop tabs to a second row */
+    @media (max-width: 1200px) and (min-width: 641px) {
+      .nav { grid-template-columns:1fr auto auto; row-gap:10px; }
+      .nav > :nth-child(1) { grid-column:1; grid-row:1; }
+      .nav > :nth-child(2) { grid-column:1 / -1; grid-row:2; justify-content:flex-start; }
+      .nav > :nth-child(3) { grid-column:2; grid-row:1; }
+      .nav > :nth-child(4) { grid-column:3; grid-row:1; }
+    }
     .nav-tab.active { background:var(--gold); color:var(--navy); font-weight:600; }
     .nav-tab:hover:not(.active) { color:var(--white); }
     .role-toggle { display:flex; align-items:center; background:var(--card-bg); border:1px solid var(--border); border-radius:100px; padding:3px; flex-shrink:0; }
