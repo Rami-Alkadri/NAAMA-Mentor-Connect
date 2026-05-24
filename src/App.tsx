@@ -13,7 +13,7 @@ const styles = `
       --card-bg:rgba(255,255,255,0.04); --border:rgba(201,168,76,0.2); --error:#e05a3a;
     }
     .app { font-family:'DM Sans',sans-serif; background:var(--navy); min-height:100vh; color:var(--white); }
-    .onboard-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; position:relative; overflow:hidden; }
+    .onboard-wrap { min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; padding-top:calc(40px + env(safe-area-inset-top, 0px)); padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px)); position:relative; overflow:hidden; }
     .onboard-wrap::before { content:''; position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(201,168,76,0.07) 0%,transparent 70%); top:-100px; right:-100px; pointer-events:none; }
     .onboard-wrap::after { content:''; position:absolute; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(74,155,142,0.06) 0%,transparent 70%); bottom:-80px; left:-80px; pointer-events:none; }
     .naama-brand { display:flex; flex-direction:column; align-items:center; margin-bottom:6px; position:relative; z-index:1; }
@@ -75,7 +75,7 @@ const styles = `
     .onboard-btn:disabled { opacity:0.4; cursor:default; }
     .onboard-back { background:none; border:none; color:var(--text-dim); font-size:12px; cursor:pointer; margin-top:12px; display:block; text-align:center; width:100%; }
     .onboard-back:hover { color:var(--white); }
-    .nav { display:flex; align-items:center; justify-content:space-between; padding:12px 32px; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,27,42,0.95); backdrop-filter:blur(12px); z-index:100; gap:14px; }
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:12px 32px; padding-top:calc(12px + env(safe-area-inset-top, 0px)); border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,27,42,0.95); backdrop-filter:blur(12px); z-index:100; gap:14px; }
     .nav-logo { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--gold); line-height:1.2; white-space:nowrap; }
     .nav-logo span { color:var(--white); }
     .nav-logo-sub { font-size:9px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
@@ -261,7 +261,7 @@ const styles = `
 
     @media (max-width: 640px) {
       /* Nav */
-      .nav { padding:10px 14px; flex-wrap:wrap; gap:6px; }
+      .nav { padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top, 0px)); flex-wrap:wrap; gap:6px; }
       .nav-logo { font-size:13px; }
       .nav-logo-sub { display:none; }
       .nav-naama-logo { height:28px !important; }
