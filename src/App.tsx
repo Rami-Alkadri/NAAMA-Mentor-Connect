@@ -260,56 +260,99 @@ const styles = `
     #root { overflow-x:hidden; }
 
     @media (max-width: 640px) {
+      /* Nav */
       .nav { padding:10px 14px; flex-wrap:wrap; gap:6px; }
       .nav-logo { font-size:13px; }
       .nav-logo-sub { display:none; }
       .nav-naama-logo { height:28px !important; }
       .nav-tabs { width:100%; order:3; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
       .nav-tabs::-webkit-scrollbar { display:none; }
-      .nav-tab { padding:5px 9px; font-size:10px; white-space:nowrap; }
+      .nav-tab { padding:7px 10px; font-size:11px; white-space:nowrap; min-height:34px; display:flex; align-items:center; }
       .role-toggle { order:2; }
-      .role-toggle-btn { padding:4px 9px; font-size:10px; }
+      .role-toggle-btn { padding:6px 10px; font-size:11px; min-height:34px; }
+
+      /* Page layout */
       .page { padding:16px 14px; }
-      .page-title { font-size:20px; }
+      .page-title { font-size:22px; }
+      .page-sub { font-size:12px; margin-bottom:16px; }
+
+      /* Prevent iOS input zoom — must be 16px */
+      .form-input, .search-input, .filter-select, .chat-input-field { font-size:16px !important; }
+
+      /* Mentor cards */
       .mentor-grid { grid-template-columns:1fr; }
       .mentor-card { padding:14px; }
-      .profile-header { flex-direction:column; align-items:center; text-align:center; padding:16px; }
-      .profile-header > div:last-child { display:flex; flex-direction:column; align-items:center; }
-      .profile-stats { gap:6px; }
-      .ps-card { padding:10px 8px; }
-      .ps-val { font-size:18px; }
-      .rel-card { flex-wrap:wrap; gap:8px; padding:12px 14px; }
-      .rel-actions { margin-left:0; width:100%; justify-content:flex-end; }
-      .schedule-wrap { grid-template-columns:1fr; }
-      .modal { padding:16px; max-height:92vh; }
-      .modal-overlay { padding:12px; }
-      .modal-stats { flex-wrap:wrap; }
-      .modal-stat { min-width:calc(50% - 4px); }
-      .page-sub { font-size:12px; margin-bottom:16px; }
-      .dual-role-banner { padding:10px 12px; }
-      .onboard-card { padding:22px 18px; }
-      .auth-card { padding:22px 18px; }
-      .profile-stats { flex-wrap:wrap; }
-      .ps-card { flex-basis:calc(50% - 4px); }
       .card-bottom { flex-wrap:wrap; gap:8px; }
       .card-stats { flex:1; }
-      .connect-btn { width:100%; text-align:center; }
+      .connect-btn { min-height:40px; padding:8px 14px; font-size:12px; width:100%; text-align:center; }
+
+      /* Profile */
+      .profile-header { flex-direction:column; align-items:center; text-align:center; padding:16px; }
+      .profile-header > div:last-child { display:flex; flex-direction:column; align-items:center; }
+      .profile-stats { gap:6px; flex-wrap:wrap; }
+      .ps-card { padding:10px 8px; flex-basis:calc(50% - 4px); }
+      .ps-val { font-size:18px; }
+
+      /* Relationships */
+      .rel-card { flex-wrap:wrap; gap:8px; padding:12px 14px; }
+      .rel-actions { margin-left:0; width:100%; justify-content:stretch; gap:6px; }
+      .rel-btn { flex:1; min-height:40px; text-align:center; padding:8px 10px; }
+
+      /* Filters */
       .filter-row { gap:6px; }
-      .filter-select { font-size:11px; padding:5px 8px; }
+      .filter-select { padding:8px 10px; min-height:40px; }
+      .img-filter-tag, .clear-btn { min-height:36px; display:flex; align-items:center; }
+
+      /* Schedule */
+      .schedule-wrap { grid-template-columns:1fr; }
+      .schedule-panel { padding:16px; }
+      .time-slots { grid-template-columns:repeat(2,1fr); }
+      .time-slot { padding:12px 6px; min-height:44px; font-size:13px; }
+      .cal-day { font-size:14px; }
+      .meeting-type-btn { min-height:52px; }
+      .schedule-btn { min-height:48px; font-size:14px; }
+
+      /* Request action buttons */
+      .request-actions { flex-wrap:wrap; }
+      .confirm-btn, .decline-btn, .reschedule-btn, .cancel-session-btn { min-height:44px; flex-basis:calc(50% - 4px); }
+
+      /* Modals — sheet from bottom */
+      .modal-overlay { padding:0; align-items:flex-end; }
+      .modal { border-radius:20px 20px 0 0; max-height:90vh; max-width:100%; padding:20px 16px 28px; }
+      .modal-stats { flex-wrap:wrap; }
+      .modal-stat { min-width:calc(50% - 4px); }
+      .modal-cta { min-height:48px; font-size:14px; }
+
+      /* Onboarding & Auth */
+      .onboard-card { padding:22px 18px; }
+      .auth-card { padding:22px 18px; }
+      .onboard-btn, .auth-submit { min-height:48px; font-size:14px; }
+      .category-btn { min-height:56px; padding:14px 10px; }
+      .tag-toggle { min-height:36px; padding:7px 12px; }
+
+      /* Notifications panel — full width on mobile */
+      .notif-panel { left:8px; right:8px; width:auto; top:58px; }
+
+      /* Dual role banner */
+      .dual-role-banner { padding:10px 12px; }
+
+      /* Toast — wider on mobile */
+      .toast { left:16px; right:16px; transform:none; text-align:center; white-space:normal; border-radius:14px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); }
     }
 
     @media (max-width: 400px) {
       .nav-logo { font-size:11px; }
-      .nav-tab { padding:4px 7px; font-size:9px; }
+      .nav-tab { padding:6px 8px; font-size:10px; }
+      .page-title { font-size:19px; }
     }
 
     .chat-input-bar { display:flex; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid var(--border); flex-shrink:0; }
     .chat-input-field { flex:1 1 0%; min-width:0; padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:var(--white); font-size:13px; font-family:'DM Sans',sans-serif; outline:none; }
     .chat-send-btn { flex-shrink:0; white-space:nowrap; padding:10px 20px; border-radius:10px; font-size:13px; }
     @media (max-width: 640px) {
-      .chat-input-bar { flex-direction:column; align-items:stretch; gap:8px; padding:10px 12px; }
-      .chat-input-field { width:100%; }
-      .chat-send-btn { width:100%; text-align:center; }
+      .chat-input-bar { flex-direction:row; align-items:center; gap:8px; padding:10px 12px; }
+      .chat-input-field { width:100%; font-size:16px !important; }
+      .chat-send-btn { min-height:44px; padding:10px 16px; flex-shrink:0; }
     }
   `;
 
@@ -2373,6 +2416,19 @@ function AdminPanel() {
     .badge-declined { background: rgba(224,90,58,0.15); color: var(--error); border: 1px solid rgba(224,90,58,0.3); }
     .admin-delete { background: none; border: none; color: var(--error); cursor: pointer; font-size: 14px; opacity: 0.5; }
     .admin-delete:hover { opacity: 1; }
+    .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 640px) {
+      .admin-wrap { padding: 16px 14px; }
+      .admin-header { flex-wrap: wrap; gap: 10px; }
+      .admin-title { font-size: 20px; }
+      .admin-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+      .admin-stat-card { padding: 14px 10px; }
+      .admin-stat-val { font-size: 24px; }
+      .admin-tabs { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .admin-tab { padding: 7px 12px; font-size: 11px; min-height: 36px; white-space: nowrap; }
+      .admin-table { font-size: 11px; min-width: 500px; }
+      .admin-table th, .admin-table td { padding: 8px 10px; }
+    }
   `;
 
   const deleteMentor = async (id: number) => {
