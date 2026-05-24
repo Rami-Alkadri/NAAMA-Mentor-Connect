@@ -2,11 +2,43 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>NAAMA Mentor Connect</title>
+
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <meta name="theme-color" content="#0d1b2a" />
+    <meta name="description" content="Mentorship platform for the National Arab American Medical Association" />
+
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mentor Connect" />
+
+    <meta name="msapplication-TileColor" content="#0d1b2a" />
+    <meta name="msapplication-TileImage" content="/icon-192.png" />
   </head>
   <body style="margin:0;padding:0;background:#0d1b2a;overflow-x:hidden;">
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            reg.addEventListener('updatefound', () => {
+              const newSW = reg.installing;
+              if (!newSW) return;
+              newSW.addEventListener('statechange', () => {
+                if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                  newSW.postMessage('SKIP_WAITING');
+                  window.location.reload();
+                }
+              });
+            });
+          });
+        });
+      }
+    </script>
   </body>
 </html>
