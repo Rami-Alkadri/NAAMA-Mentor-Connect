@@ -422,6 +422,7 @@ const CATEGORIES = [
   { id: 'pharmacy', icon: '💊', label: 'Pharmacy' },
   { id: 'publichealth', icon: '🌍', label: 'Public Health' },
   { id: 'other', icon: '⚕️', label: 'Other Healthcare Field' },
+  { id: 'visa', icon: '🛂', label: 'Visa Guidance' },
 ];
 
 const SPECIALTIES: Record<string, { group: string; options: string[] }[]> = {
