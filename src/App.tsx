@@ -75,12 +75,14 @@ const styles = `
     .onboard-btn:disabled { opacity:0.4; cursor:default; }
     .onboard-back { background:none; border:none; color:var(--text-dim); font-size:12px; cursor:pointer; margin-top:12px; display:block; text-align:center; width:100%; }
     .onboard-back:hover { color:var(--white); }
-    .nav { display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; padding:12px 32px; padding-top:calc(12px + env(safe-area-inset-top, 0px)); border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,27,42,0.95); backdrop-filter:blur(12px); z-index:100; gap:14px; }
+    .nav { display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; align-items:center; padding:12px 24px; padding-top:calc(12px + env(safe-area-inset-top, 0px)); border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,27,42,0.95); backdrop-filter:blur(12px); z-index:100; gap:12px; }
     .nav-logo { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--gold); line-height:1.2; white-space:nowrap; }
     .nav-logo span { color:var(--white); }
     .nav-logo-sub { font-size:9px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
-    .nav-tabs { display:flex; gap:4px; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:4px; justify-content:center; }
-    .nav-tab { padding:7px 16px; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; border:none; background:transparent; color:var(--text-dim); transition:all 0.2s; white-space:nowrap; }
+    .nav-tabs { display:flex; gap:2px; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:3px; justify-content:center; min-width:0; max-width:100%; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
+    .nav-tabs::-webkit-scrollbar { display:none; }
+    .nav-tab { padding:7px 12px; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; border:none; background:transparent; color:var(--text-dim); transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
+    @media (min-width:1100px) { .nav-tab { padding:7px 14px; } }
     .nav-tab.active { background:var(--gold); color:var(--navy); font-weight:600; }
     .nav-tab:hover:not(.active) { color:var(--white); }
     .role-toggle { display:flex; align-items:center; background:var(--card-bg); border:1px solid var(--border); border-radius:100px; padding:3px; flex-shrink:0; }
