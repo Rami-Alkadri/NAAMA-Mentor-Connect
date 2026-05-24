@@ -413,6 +413,7 @@ const SPECIALTIES: Record<string, { group: string; options: string[] }[]> = {
         'Interventional Cardiology',
         'Electrophysiology',
         'Heart Failure',
+        'Vascular Medicine',
         'Pulmonology / Critical Care',
         'Gastroenterology',
         'Hepatology',
