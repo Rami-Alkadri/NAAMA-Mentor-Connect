@@ -260,19 +260,21 @@ const styles = `
     #root { overflow-x:hidden; }
 
     @media (max-width: 640px) {
-      /* Nav */
-      .nav { padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top, 0px)); flex-wrap:wrap; gap:6px; }
+      /* Nav — compact single row */
+      .nav { padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top, 0px)); flex-wrap:nowrap; gap:8px; justify-content:space-between; }
       .nav-logo { font-size:13px; }
       .nav-logo-sub { display:none; }
-      .nav-naama-logo { height:28px !important; }
-      .nav-tabs { width:100%; order:3; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
+      .nav-naama-logo { height:30px !important; }
+
+      /* Tabs → fixed bottom bar */
+      .nav-tabs { position:fixed; bottom:0; left:0; right:0; width:100% !important; order:0; z-index:99; background:rgba(23,47,78,0.97); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-top:1px solid var(--border); border-radius:0; padding:6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:2px; justify-content:stretch; }
       .nav-tabs::-webkit-scrollbar { display:none; }
-      .nav-tab { padding:7px 10px; font-size:11px; white-space:nowrap; min-height:34px; display:flex; align-items:center; }
-      .role-toggle { order:2; }
+      .nav-tab { flex:1; min-width:52px; padding:8px 4px; font-size:11px; white-space:nowrap; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; }
+      .role-toggle { order:0; flex-shrink:0; }
       .role-toggle-btn { padding:6px 10px; font-size:11px; min-height:34px; }
 
-      /* Page layout */
-      .page { padding:16px 14px; }
+      /* Page layout — extra bottom padding for fixed tab bar */
+      .page { padding:16px 14px calc(80px + env(safe-area-inset-bottom, 0px)); }
       .page-title { font-size:22px; }
       .page-sub { font-size:12px; margin-bottom:16px; }
 
@@ -331,13 +333,13 @@ const styles = `
       .tag-toggle { min-height:36px; padding:7px 12px; }
 
       /* Notifications panel — full width on mobile */
-      .notif-panel { left:8px; right:8px; width:auto; top:58px; }
+      .notif-panel { left:8px; right:8px; width:auto; top:calc(54px + env(safe-area-inset-top, 0px)); }
 
       /* Dual role banner */
       .dual-role-banner { padding:10px 12px; }
 
-      /* Toast — wider on mobile */
-      .toast { left:16px; right:16px; transform:none; text-align:center; white-space:normal; border-radius:14px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); }
+      /* Toast — above bottom tab bar on mobile */
+      .toast { left:16px; right:16px; transform:none; text-align:center; white-space:normal; border-radius:14px; bottom:calc(72px + env(safe-area-inset-bottom, 0px)); }
     }
 
     @media (max-width: 400px) {
@@ -350,9 +352,12 @@ const styles = `
     .chat-input-field { flex:1 1 0%; min-width:0; padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:var(--white); font-size:13px; font-family:'DM Sans',sans-serif; outline:none; }
     .chat-send-btn { flex-shrink:0; white-space:nowrap; padding:10px 20px; border-radius:10px; font-size:13px; }
     @media (max-width: 640px) {
-      .chat-input-bar { flex-direction:row; align-items:center; gap:8px; padding:10px 12px; }
+      .chat-input-bar { flex-direction:row; align-items:center; gap:8px; padding:10px 12px; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px)); }
       .chat-input-field { width:100%; font-size:16px !important; }
-      .chat-send-btn { min-height:44px; padding:10px 16px; flex-shrink:0; }
+      .chat-send-btn { min-height:48px; padding:10px 16px; flex-shrink:0; }
+      /* Chat goes full-screen on mobile portrait */
+      .chat-modal-overlay { padding:0 !important; align-items:stretch !important; }
+      .chat-modal { border-radius:0 !important; max-height:100dvh !important; height:100dvh !important; max-width:100% !important; }
     }
   `;
 
@@ -2314,8 +2319,8 @@ function ChatModal({ conn, myUserId, authToken, onClose }: { conn: any; myUserId
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}
+    <div className="modal-overlay chat-modal-overlay" onClick={onClose}>
+      <div className="modal chat-modal" onClick={e => e.stopPropagation()}
         style={{ maxWidth: 460, padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: '85vh' }}>
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <Avatar photo={otherPhoto} initials={otherInitials} grad={otherGrad} size={36} radius={18} />
@@ -2326,7 +2331,7 @@ function ChatModal({ conn, myUserId, authToken, onClose }: { conn: any; myUserId
           <button className="modal-close" style={{ position: 'static' }} onClick={onClose}>✕</button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 260 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: 13, marginTop: 40 }}>No messages yet — say hello!</div>
           )}
