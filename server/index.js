@@ -468,6 +468,26 @@ app.post('/api/connections', optionalAuth, async (req, res) => {
 
     const connectionId = rows[0]?.id;
 
+    // Immediate push notification to the mentor
+    if (connectionId) {
+      const { is_collab: ic } = req.body;
+      pool.query(
+        `SELECT m.linked_user_id as mentor_user_id, up.name as mentee_name
+         FROM mentors m, user_profiles up
+         WHERE m.id = $1 AND up.id = $2`,
+        [mentor_id, user_profile_id]
+      ).then(({ rows: pr }) => {
+        if (pr[0]?.mentor_user_id) {
+          const label = ic ? 'Collaboration' : 'Mentorship';
+          sendPushNotification(
+            pr[0].mentor_user_id,
+            `New ${label} Request`,
+            `${pr[0].mentee_name} has sent you a ${label.toLowerCase()} request.`
+          ).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     // Schedule email notifications with a 60-minute delay so that if the
     // request is withdrawn before then, the emails are never sent.
     if (connectionId) {
@@ -720,6 +740,9 @@ app.post('/api/messages', authMiddleware, async (req, res) => {
       const recipientName = isSenderMentee ? conn.mentor_name : conn.mentee_name;
       if (!recipientEmail || !recipientName) return;
       const preview = content.trim().length > 100 ? content.trim().slice(0, 100) + '…' : content.trim();
+      const recipientUserId = isSenderMentee ? conn.mentor_user_id : conn.mentee_user_id;
+      const pushPreview = content.trim().length > 80 ? content.trim().slice(0, 80) + '…' : content.trim();
+      if (recipientUserId) sendPushNotification(recipientUserId, `New message from ${senderName}`, pushPreview).catch(() => {});
       return sendEmail(
         recipientEmail,
         `New message from ${senderName}`,
