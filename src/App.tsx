@@ -75,11 +75,11 @@ const styles = `
     .onboard-btn:disabled { opacity:0.4; cursor:default; }
     .onboard-back { background:none; border:none; color:var(--text-dim); font-size:12px; cursor:pointer; margin-top:12px; display:block; text-align:center; width:100%; }
     .onboard-back:hover { color:var(--white); }
-    .nav { display:flex; align-items:center; justify-content:space-between; padding:12px 32px; padding-top:calc(12px + env(safe-area-inset-top, 0px)); border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,27,42,0.95); backdrop-filter:blur(12px); z-index:100; gap:14px; }
+    .nav { display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; padding:12px 32px; padding-top:calc(12px + env(safe-area-inset-top, 0px)); border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,27,42,0.95); backdrop-filter:blur(12px); z-index:100; gap:14px; }
     .nav-logo { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--gold); line-height:1.2; white-space:nowrap; }
     .nav-logo span { color:var(--white); }
     .nav-logo-sub { font-size:9px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
-    .nav-tabs { display:flex; gap:4px; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:4px; flex:1; justify-content:center; }
+    .nav-tabs { display:flex; gap:4px; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:4px; justify-content:center; }
     .nav-tab { padding:7px 16px; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; border:none; background:transparent; color:var(--text-dim); transition:all 0.2s; white-space:nowrap; }
     .nav-tab.active { background:var(--gold); color:var(--navy); font-weight:600; }
     .nav-tab:hover:not(.active) { color:var(--white); }
@@ -261,7 +261,7 @@ const styles = `
 
     @media (max-width: 640px) {
       /* Nav — compact single row */
-      .nav { padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top, 0px)); flex-wrap:nowrap; gap:8px; justify-content:space-between; }
+      .nav { display:flex; padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top, 0px)); flex-wrap:nowrap; gap:8px; justify-content:space-between; }
       .nav-logo { font-size:13px; }
       .nav-logo-sub { display:none; }
       .nav-naama-logo { height:30px !important; }
