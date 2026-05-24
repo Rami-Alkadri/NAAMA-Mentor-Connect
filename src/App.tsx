@@ -7,10 +7,10 @@ const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
     * { box-sizing:border-box; margin:0; padding:0; }
     :root {
-      --navy:#1e3a5f; --navy-mid:#264d7a; --navy-deep:#172f4e;
-      --gold:#c9a84c; --gold-light:#e8c97a;
-      --text-dim:#8a9ab0; --accent-teal:#4a9b8e; --white:#ffffff;
-      --card-bg:rgba(255,255,255,0.04); --border:rgba(201,168,76,0.2); --error:#e05a3a;
+      --navy:#13294a; --navy-mid:#264d7a; --navy-deep:#0c1d36;
+      --gold:#e0bd5b; --gold-light:#f0d27d;
+      --text-dim:#b8c5d6; --accent-teal:#5fb3a4; --white:#ffffff;
+      --card-bg:rgba(255,255,255,0.07); --border:rgba(224,189,91,0.35); --error:#f06b4a;
     }
     .app { font-family:'DM Sans',sans-serif; background:var(--navy); min-height:100vh; color:var(--white); }
     .onboard-wrap { min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; padding-top:calc(40px + env(safe-area-inset-top, 0px)); padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px)); position:relative; overflow:hidden; }
@@ -256,7 +256,7 @@ const styles = `
     .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--accent-teal); color:var(--white); padding:10px 20px; border-radius:100px; font-size:12px; font-weight:600; z-index:300; box-shadow:0 8px 24px rgba(0,0,0,0.3); animation:slideUp 0.3s ease; white-space:nowrap; }
     @keyframes slideUp { from{opacity:0;transform:translateX(-50%) translateY(14px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
 
-    html, body { background:#1e3a5f; overflow-x:hidden; margin:0; padding:0; }
+    html, body { background:#13294a; overflow-x:hidden; margin:0; padding:0; }
     #root { overflow-x:hidden; }
 
     @media (max-width: 640px) {
@@ -3362,7 +3362,7 @@ export default function App() {
                       style={{
                         padding: '6px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
                         background: menteeConnTab === t ? 'var(--gold)' : 'rgba(255,255,255,0.07)',
-                        color: menteeConnTab === t ? '#1e3a5f' : 'var(--text-dim)',
+                        color: menteeConnTab === t ? '#13294a' : 'var(--text-dim)',
                         transition: 'all 0.2s',
                       }}
                     >
@@ -3488,7 +3488,7 @@ export default function App() {
                       {unread > 0 && (
                         <span style={{
                           position: 'absolute', top: -4, right: -4,
-                          background: 'var(--gold)', color: '#1e3a5f',
+                          background: 'var(--gold)', color: '#13294a',
                           borderRadius: '50%', width: 18, height: 18,
                           fontSize: 10, fontWeight: 700,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
