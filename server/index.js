@@ -5,7 +5,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import webpush from 'web-push';
 
@@ -15,44 +14,12 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = process.env.JWT_SECRET || 'naama-connect-secret-key-2025';
 
-const SMTP_USER = (process.env.SMTP_USER || '').trim();
-const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s/g, '');
-console.log('[SMTP] SMTP_USER:', SMTP_USER || 'NOT SET');
-console.log('[SMTP] SMTP_PASS:', SMTP_PASS ? `SET (${SMTP_PASS.length} chars)` : 'NOT SET');
-
-const mailer = SMTP_USER && SMTP_PASS
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    })
-  : null;
-
-console.log('[SMTP] Mailer initialized:', mailer ? 'YES' : 'NO — credentials missing');
-
-async function sendEmail(to, subject, html) {
-  if (!mailer) {
-    console.error('[SMTP] Cannot send — mailer not initialized (missing credentials)');
-    return;
-  }
-  try {
-    const info = await mailer.sendMail({ from: `"NAAMA Mentor Connect" <${SMTP_USER}>`, to, subject, html });
-    console.log('[SMTP] Email sent to', to, '— messageId:', info.messageId);
-  } catch (e) {
-    console.error('[SMTP] Send error:', e.message, e.code || '');
-  }
-}
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// In-memory map of connectionId → timeout handle for delayed connection emails.
-// If the connection is withdrawn within EMAIL_DELAY_MS, the email is cancelled.
-const EMAIL_DELAY_MS = 60 * 60 * 1000; // 60 minutes
-const pendingConnectionEmails = new Map();
 
 // ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -257,17 +224,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const host = req.get('host');
     const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
     const resetUrl = `${proto}://${host}/?reset_token=${token}`;
-    await sendEmail(
-      email.toLowerCase(),
-      'Reset your NAAMA Mentor Connect password',
-      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-        <h2 style="color:#c9a84c;margin-bottom:8px;">Password Reset</h2>
-        <p style="color:#8a9ab0;">We received a request to reset your password. Click the button below to set a new one.</p>
-        <a href="${resetUrl}" style="display:inline-block;margin:20px 0;padding:12px 28px;background:#c9a84c;color:#0d1b2a;border-radius:10px;font-weight:700;text-decoration:none;">Reset Password</a>
-        <p style="color:#8a9ab0;font-size:12px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-        <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-      </div>`
-    );
+    console.log('[PASSWORD RESET] Reset URL for', email.toLowerCase(), ':', resetUrl);
     res.json({ success: true });
   } catch (e) {
     console.error('Forgot password error:', e.message);
@@ -488,61 +445,6 @@ app.post('/api/connections', optionalAuth, async (req, res) => {
       }).catch(() => {});
     }
 
-    // Schedule email notifications with a 60-minute delay so that if the
-    // request is withdrawn before then, the emails are never sent.
-    if (connectionId) {
-      const { is_collab } = req.body;
-      const timeoutHandle = setTimeout(async () => {
-        pendingConnectionEmails.delete(connectionId);
-        try {
-          const [userRes, mentorRes] = await Promise.all([
-            pool.query(`SELECT u.email, up.name as profile_name FROM users u JOIN user_profiles up ON u.profile_id = up.id WHERE up.id = $1`, [user_profile_id]),
-            pool.query(`SELECT m.name, m.specialty, m.institution, m.linked_user_id, u.email as mentor_email
-                        FROM mentors m LEFT JOIN users u ON u.id = m.linked_user_id WHERE m.id = $1`, [mentor_id]),
-          ]);
-          // Verify connection still exists before sending
-          const { rows: check } = await pool.query('SELECT id FROM connections WHERE id = $1', [connectionId]);
-          if (!check.length) return; // withdrawn before timer fired
-
-          const user = userRes.rows[0];
-          const mentor = mentorRes.rows[0];
-          const requestType = is_collab ? 'Collaboration' : 'Mentorship';
-
-          if (user?.email && mentor) {
-            sendEmail(
-              user.email,
-              `Your ${requestType} request to ${mentor.name} was sent!`,
-              `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-                <h2 style="color:#c9a84c;margin-bottom:8px;">${requestType} Request Sent</h2>
-                <p style="color:#8a9ab0;">Hi ${user.profile_name},</p>
-                <p style="color:#8a9ab0;">Your ${requestType.toLowerCase()} request to <strong style="color:#fff">${mentor.name}</strong> (${mentor.specialty} · ${mentor.institution}) has been sent successfully.</p>
-                <p style="color:#8a9ab0;">You'll hear back once they review your request. In the meantime, you can schedule a session from your dashboard.</p>
-                <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-              </div>`
-            ).catch(() => {});
-          }
-
-          if (mentor?.mentor_email && user) {
-            sendEmail(
-              mentor.mentor_email,
-              `New ${requestType} Request from ${user.profile_name}`,
-              `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-                <h2 style="color:#c9a84c;margin-bottom:8px;">New ${requestType} Request</h2>
-                <p style="color:#8a9ab0;">Hi ${mentor.name},</p>
-                <p style="color:#8a9ab0;"><strong style="color:#fff">${user.profile_name}</strong> has sent you a ${requestType.toLowerCase()} request on NAAMA Mentor Connect.</p>
-                <p style="color:#8a9ab0;">Log in to your dashboard to review and respond to their request.</p>
-                <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-              </div>`
-            ).catch(() => {});
-          }
-        } catch (emailErr) {
-          console.error('Delayed connection email error:', emailErr.message);
-        }
-      }, EMAIL_DELAY_MS);
-
-      pendingConnectionEmails.set(connectionId, timeoutHandle);
-    }
-
     res.status(201).json(rows[0] || { status: 'already_exists' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -615,35 +517,17 @@ app.put('/api/connections/:id/status', authMiddleware, async (req, res) => {
 
     // Notify the mentee that their connection request was accepted or declined
     pool.query(
-      `SELECT u_mentee.email as mentee_email, c.user_id as mentee_user_id, up.name as mentee_name,
+      `SELECT c.user_id as mentee_user_id, up.name as mentee_name,
               m.name as mentor_name, m.specialty as mentor_specialty
        FROM connections c
        JOIN mentors m ON c.mentor_id = m.id
-       LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
        LEFT JOIN user_profiles up ON up.id = c.user_profile_id
        WHERE c.id = $1`,
       [req.params.id]
     ).then(({ rows: p }) => {
       const party = p[0];
-      if (!party?.mentee_email) return;
+      if (!party) return;
       const isAccepted = status === 'accepted';
-      const subjectLine = isAccepted
-        ? `Your mentorship request was accepted — ${party.mentor_name}`
-        : `Update on your mentorship request — ${party.mentor_name}`;
-      const html = `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-          <h2 style="color:${isAccepted ? '#c9a84c' : '#8a9ab0'};margin-bottom:8px;">
-            ${isAccepted ? 'Connection Accepted!' : 'Connection Not Accepted'}
-          </h2>
-          <p style="color:#8a9ab0;">Hi ${party.mentee_name || 'there'},</p>
-          ${isAccepted
-            ? `<p style="color:#8a9ab0;"><strong style="color:#fff">${party.mentor_name}</strong>${party.mentor_specialty ? ` (${party.mentor_specialty})` : ''} has accepted your mentorship request. You can now message them directly from your dashboard.</p>
-               <p style="color:#8a9ab0;">Log in to start the conversation and schedule your first session.</p>`
-            : `<p style="color:#8a9ab0;"><strong style="color:#fff">${party.mentor_name}</strong>${party.mentor_specialty ? ` (${party.mentor_specialty})` : ''} was unable to accept your request at this time. Don't be discouraged — browse the directory to find another mentor who may be a great fit.</p>`
-          }
-          <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-        </div>`;
-      sendEmail(party.mentee_email, subjectLine, html).catch(() => {});
       if (party.mentee_user_id) {
         sendPushNotification(
           party.mentee_user_id,
@@ -670,13 +554,7 @@ app.delete('/api/connections/:id', authMiddleware, async (req, res) => {
     );
     if (!rows.length) return res.status(403).json({ error: 'Not authorized or not found' });
 
-    // Cancel any pending email notification for this connection
     const connId = Number(req.params.id);
-    if (pendingConnectionEmails.has(connId)) {
-      clearTimeout(pendingConnectionEmails.get(connId));
-      pendingConnectionEmails.delete(connId);
-    }
-
     await pool.query('DELETE FROM connections WHERE id = $1', [connId]);
     res.json({ success: true });
   } catch (e) {
@@ -714,48 +592,24 @@ app.post('/api/messages', authMiddleware, async (req, res) => {
     );
     res.status(201).json(rows[0]);
 
-    // Send email notification to the recipient (fire-and-forget)
+    // Push notification to the recipient
     pool.query(
-      `SELECT
-         c.user_id as mentee_user_id,
-         m.linked_user_id as mentor_user_id,
-         m.name as mentor_name,
-         up.name as mentee_name,
-         u_mentee.email as mentee_email,
-         u_mentor.email as mentor_email
+      `SELECT c.user_id as mentee_user_id, m.linked_user_id as mentor_user_id,
+              m.name as mentor_name, up.name as mentee_name
        FROM connections c
        JOIN mentors m ON c.mentor_id = m.id
        LEFT JOIN user_profiles up ON c.user_profile_id = up.id
-       LEFT JOIN users u_mentee ON u_mentee.id = c.user_id
-       LEFT JOIN users u_mentor ON u_mentor.id = m.linked_user_id
        WHERE c.id = $1`,
       [connection_id]
     ).then(({ rows: connRows }) => {
       if (!connRows.length) return;
       const conn = connRows[0];
-      const senderId = req.user.userId;
-      const isSenderMentee = conn.mentee_user_id === senderId;
+      const isSenderMentee = conn.mentee_user_id === req.user.userId;
       const senderName = isSenderMentee ? conn.mentee_name : conn.mentor_name;
-      const recipientEmail = isSenderMentee ? conn.mentor_email : conn.mentee_email;
-      const recipientName = isSenderMentee ? conn.mentor_name : conn.mentee_name;
-      if (!recipientEmail || !recipientName) return;
-      const preview = content.trim().length > 100 ? content.trim().slice(0, 100) + '…' : content.trim();
       const recipientUserId = isSenderMentee ? conn.mentor_user_id : conn.mentee_user_id;
       const pushPreview = content.trim().length > 80 ? content.trim().slice(0, 80) + '…' : content.trim();
       if (recipientUserId) sendPushNotification(recipientUserId, `New message from ${senderName}`, pushPreview).catch(() => {});
-      return sendEmail(
-        recipientEmail,
-        `New message from ${senderName}`,
-        `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-          <h2 style="color:#c9a84c;margin-bottom:8px;">New Message</h2>
-          <p style="color:#8a9ab0;">Hi ${recipientName},</p>
-          <p style="color:#8a9ab0;"><strong style="color:#fff">${senderName}</strong> sent you a message on NAAMA Mentor Connect:</p>
-          <blockquote style="border-left:3px solid #c9a84c;margin:16px 0;padding:12px 16px;background:#162032;border-radius:0 8px 8px 0;color:#fff;">${preview}</blockquote>
-          <p style="color:#8a9ab0;">Log in to your dashboard to reply.</p>
-          <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-        </div>`
-      );
-    }).catch(err => console.error('Chat email error:', err.message));
+    }).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -807,35 +661,7 @@ app.post('/api/schedule-requests', async (req, res) => {
     res.status(201).json(rows[0]);
 
     if (r.mentor_user_id) {
-      try {
-        const mentorRes = await pool.query(
-          `SELECT u.email, m.name FROM mentors m JOIN users u ON u.id = m.linked_user_id WHERE m.linked_user_id = $1`,
-          [r.mentor_user_id]
-        );
-        const mentor = mentorRes.rows[0];
-        if (mentor?.email) {
-          if (r.mentor_user_id) sendPushNotification(r.mentor_user_id, 'New Session Request', `${r.mentee} has requested a session with you.`).catch(() => {});
-          sendEmail(
-            mentor.email,
-            `New Session Request from ${r.mentee}`,
-            `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-              <h2 style="color:#c9a84c;margin-bottom:8px;">New Session Request</h2>
-              <p style="color:#8a9ab0;">Hi ${mentor.name},</p>
-              <p style="color:#8a9ab0;"><strong style="color:#fff">${r.mentee}</strong> has requested a session with you on NAAMA Mentor Connect.</p>
-              <table style="margin:16px 0;border-collapse:collapse;width:100%;">
-                <tr><td style="color:#8a9ab0;padding:4px 0;width:80px;">Type</td><td style="color:#fff;">${r.type}</td></tr>
-                <tr><td style="color:#8a9ab0;padding:4px 0;">Date</td><td style="color:#fff;">${r.date}</td></tr>
-                <tr><td style="color:#8a9ab0;padding:4px 0;">Time</td><td style="color:#fff;">${r.time}</td></tr>
-                ${r.note ? `<tr><td style="color:#8a9ab0;padding:4px 0;">Note</td><td style="color:#fff;">${r.note}</td></tr>` : ''}
-              </table>
-              <p style="color:#8a9ab0;">Log in to your dashboard to confirm or decline this request.</p>
-              <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-            </div>`
-          ).catch(() => {});
-        }
-      } catch (emailErr) {
-        console.error('Schedule request email error:', emailErr.message);
-      }
+      sendPushNotification(r.mentor_user_id, 'New Session Request', `${r.mentee} has requested a session with you.`).catch(() => {});
     }
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -921,21 +747,10 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
         const by = req.body.rescheduled_by === 'mentor' ? p.mentor_name : p.mentee_name;
         const newDate = date || p.meeting_date;
         const newTime = time || p.meeting_time;
-        const emailHtml = (recipientName) =>
-          `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-            <h2 style="color:#c9a84c;margin-bottom:8px;">Session Rescheduled</h2>
-            <p style="color:#8a9ab0;">Hi ${recipientName},</p>
-            <p style="color:#8a9ab0;"><strong style="color:#fff">${by}</strong> has proposed a new time for your session:</p>
-            <p style="color:#fff;margin:12px 0;"><strong>New Date:</strong> ${newDate}<br/><strong>New Time:</strong> ${newTime}<br/><strong>Type:</strong> ${type || p.meeting_type}</p>
-            <p style="color:#8a9ab0;">Log in to confirm or decline the updated request.</p>
-            <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-          </div>`;
-        if (req.body.rescheduled_by === 'mentor' && p.mentee_email) {
-          sendEmail(p.mentee_email, 'Your session has been rescheduled', emailHtml(p.mentee_name)).catch(() => {});
+        if (req.body.rescheduled_by === 'mentor') {
           if (p.mentee_user_id) sendPushNotification(p.mentee_user_id, 'Session Rescheduled', `${p.mentor_name || 'Your mentor'} proposed a new time: ${newDate} at ${newTime}.`).catch(() => {});
         }
-        if (req.body.rescheduled_by === 'mentee' && p.mentor_email) {
-          sendEmail(p.mentor_email, 'Your session has been rescheduled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+        if (req.body.rescheduled_by === 'mentee') {
           if (p.mentor_user_id) sendPushNotification(p.mentor_user_id, 'Session Rescheduled', `${p.mentee_name} proposed a new time: ${newDate} at ${newTime}.`).catch(() => {});
         }
       }
@@ -949,44 +764,18 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
       // Send confirmation notification to mentee
       if (status === 'confirmed') {
         getScheduleParties(req.params.id).then(p => {
-          if (!p?.mentee_email) return;
-          const html = `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-              <h2 style="color:#c9a84c;margin-bottom:8px;">Session Confirmed!</h2>
-              <p style="color:#8a9ab0;">Hi ${p.mentee_name || 'there'},</p>
-              <p style="color:#8a9ab0;"><strong style="color:#fff">${p.mentor_name || 'Your mentor'}</strong> has confirmed your upcoming session:</p>
-              <p style="color:#fff;margin:12px 0;">
-                <strong>Date:</strong> ${p.meeting_date}<br/>
-                <strong>Time:</strong> ${p.meeting_time}<br/>
-                <strong>Type:</strong> ${p.meeting_type}
-              </p>
-              <p style="color:#8a9ab0;">We look forward to seeing you there. You can view your session details from your dashboard.</p>
-              <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-            </div>`;
-          sendEmail(p.mentee_email, `Your session is confirmed — ${p.mentor_name || 'NAAMA Mentor Connect'}`, html).catch(() => {});
+          if (!p) return;
           if (p.mentee_user_id) sendPushNotification(p.mentee_user_id, 'Session Confirmed!', `${p.mentor_name || 'Your mentor'} confirmed your session on ${p.meeting_date} at ${p.meeting_time}.`).catch(() => {});
-        }).catch(err => console.error('Session confirm email error:', err.message));
+        }).catch(() => {});
       }
       // Send cancellation notifications
       if (status === 'cancelled') {
         const p = await getScheduleParties(req.params.id);
         if (p) {
-          const cancelledBy = req.body.cancelled_by === 'mentor' ? (p.mentor_name || 'Your mentor') : p.mentee_name;
-          const emailHtml = (recipientName) =>
-            `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0d1b2a;color:#fff;border-radius:12px;">
-              <h2 style="color:#c9a84c;margin-bottom:8px;">Session Cancelled</h2>
-              <p style="color:#8a9ab0;">Hi ${recipientName},</p>
-              <p style="color:#8a9ab0;"><strong style="color:#fff">${cancelledBy}</strong> has cancelled your upcoming session:</p>
-              <p style="color:#fff;margin:12px 0;"><strong>Date:</strong> ${p.meeting_date}<br/><strong>Time:</strong> ${p.meeting_time}<br/><strong>Type:</strong> ${p.meeting_type}</p>
-              <p style="color:#8a9ab0;">You can schedule a new session from your dashboard.</p>
-              <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
-            </div>`;
-          if (req.body.cancelled_by === 'mentor' && p.mentee_email) {
-            sendEmail(p.mentee_email, 'Your session has been cancelled', emailHtml(p.mentee_name)).catch(() => {});
+          if (req.body.cancelled_by === 'mentor') {
             if (p.mentee_user_id) sendPushNotification(p.mentee_user_id, 'Session Cancelled', `${p.mentor_name || 'Your mentor'} cancelled your session on ${p.meeting_date}.`).catch(() => {});
           }
-          if (req.body.cancelled_by === 'mentee' && p.mentor_email) {
-            sendEmail(p.mentor_email, 'Your session has been cancelled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+          if (req.body.cancelled_by === 'mentee') {
             if (p.mentor_user_id) sendPushNotification(p.mentor_user_id, 'Session Cancelled', `${p.mentee_name} cancelled the session on ${p.meeting_date}.`).catch(() => {});
           }
         }
