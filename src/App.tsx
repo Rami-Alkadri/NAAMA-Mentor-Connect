@@ -3656,13 +3656,15 @@ export default function App() {
                         const perm = await Notification.requestPermission();
                         setPushPermission(perm);
                         if (perm !== 'granted') { setPushLoading(false); return; }
-                        const { publicKey } = await fetch('/api/push/vapid-key').then(r => r.json());
-                        // Convert VAPID public key from base64 string to Uint8Array
-                        const padding = '='.repeat((4 - publicKey.length % 4) % 4);
+                        const { publicKey: rawPublicKey } = await fetch('/api/push/vapid-key').then(r => r.json());
+                        const publicKey = (rawPublicKey || '').trim();
+                        console.log('[Push] publicKey len:', publicKey.length, 'key:', publicKey);
+                        // Convert VAPID public key from URL-safe base64 to Uint8Array
+                        const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
                         const base64 = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
                         const rawData = window.atob(base64);
-                        const vapidKey = new Uint8Array(rawData.length);
-                        for (let i = 0; i < rawData.length; i++) vapidKey[i] = rawData.charCodeAt(i);
+                        const vapidKey = Uint8Array.from(rawData, (c) => c.charCodeAt(0));
+                        console.log('[Push] vapidKey bytes:', vapidKey.length, 'first:', vapidKey[0]);
                         const reg = await navigator.serviceWorker.ready;
                         const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKey });
                         await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ subscription: sub }) });

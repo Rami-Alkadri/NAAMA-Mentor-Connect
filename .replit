@@ -50,6 +50,6 @@ run = ["npm", "run", "start"]
 
 [userenv.shared]
 SMTP_USER = "naamamentorconnect@gmail.com"
-VAPID_PUBLIC_KEY = "BOjptTwAKWD_cUjcQD-EUolDSxaPvBvbY9g_iafjujnHcLTaVrI_-kkzmzNGKC2Go5GWlmS8kYqDzjOw6NY5Hfs"
-VAPID_PRIVATE_KEY = "GgcfKvWry7r3-ezQyH07tdt57TnfE94TRHQIsWFiVyQ"
+VAPID_PUBLIC_KEY = "BJr5ISkoyiIOXpL2ZJpEH23gA8OMfC1IFe_EX28lyvuy3xJciYtCAUHcQcvUyF6Ag1gTZPmwErZD6-GYYTgcBDY"
+VAPID_PRIVATE_KEY = "sECRIb0e9AnOSHrroxJrTt8UX8k41tjptq84_BQWyP4"
 VAPID_EMAIL = "mailto:naamamentorconnect@gmail.com"
