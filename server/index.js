@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import webpush from 'web-push';
 
 const { Pool } = pg;
 const app = express();
@@ -52,6 +53,34 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // If the connection is withdrawn within EMAIL_DELAY_MS, the email is cancelled.
 const EMAIL_DELAY_MS = 60 * 60 * 1000; // 60 minutes
 const pendingConnectionEmails = new Map();
+
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL || 'mailto:naamamentorconnect@gmail.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+  console.log('[PUSH] VAPID configured');
+} else {
+  console.log('[PUSH] VAPID keys not set — push disabled');
+}
+
+async function sendPushNotification(userId, title, body, url = '/') {
+  if (!process.env.VAPID_PUBLIC_KEY) return;
+  try {
+    const { rows } = await pool.query('SELECT subscription FROM push_subscriptions WHERE user_id = $1', [userId]);
+    if (!rows.length) return;
+    await webpush.sendNotification(rows[0].subscription, JSON.stringify({ title, body, url }));
+    console.log('[PUSH] Sent to user', userId, ':', title);
+  } catch (e) {
+    if (e.statusCode === 410 || e.statusCode === 404) {
+      await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]).catch(() => {});
+    } else {
+      console.error('[PUSH] Error sending to user', userId, ':', e.message);
+    }
+  }
+}
 
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
@@ -566,7 +595,7 @@ app.put('/api/connections/:id/status', authMiddleware, async (req, res) => {
 
     // Notify the mentee that their connection request was accepted or declined
     pool.query(
-      `SELECT u_mentee.email as mentee_email, up.name as mentee_name,
+      `SELECT u_mentee.email as mentee_email, c.user_id as mentee_user_id, up.name as mentee_name,
               m.name as mentor_name, m.specialty as mentor_specialty
        FROM connections c
        JOIN mentors m ON c.mentor_id = m.id
@@ -595,6 +624,15 @@ app.put('/api/connections/:id/status', authMiddleware, async (req, res) => {
           <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
         </div>`;
       sendEmail(party.mentee_email, subjectLine, html).catch(() => {});
+      if (party.mentee_user_id) {
+        sendPushNotification(
+          party.mentee_user_id,
+          isAccepted ? 'Connection Accepted!' : 'Connection Update',
+          isAccepted
+            ? `${party.mentor_name} has accepted your mentorship request.`
+            : `${party.mentor_name} was unable to accept your request at this time.`
+        ).catch(() => {});
+      }
     }).catch(err => console.error('Connection status email error:', err.message));
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -753,6 +791,7 @@ app.post('/api/schedule-requests', async (req, res) => {
         );
         const mentor = mentorRes.rows[0];
         if (mentor?.email) {
+          if (r.mentor_user_id) sendPushNotification(r.mentor_user_id, 'New Session Request', `${r.mentee} has requested a session with you.`).catch(() => {});
           sendEmail(
             mentor.email,
             `New Session Request from ${r.mentee}`,
@@ -821,7 +860,7 @@ app.get('/api/schedule-requests', async (req, res) => {
 async function getScheduleParties(requestId) {
   const { rows } = await pool.query(
     `SELECT sr.mentee_name, sr.meeting_type, sr.meeting_date, sr.meeting_time, sr.mentor_user_id,
-            u_mentee.email as mentee_email,
+            u_mentee.email as mentee_email, u_mentee.id as mentee_user_id,
             u_mentor.email as mentor_email,
             m.name as mentor_name
      FROM schedule_requests sr
@@ -868,8 +907,14 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
             <p style="color:#8a9ab0;">Log in to confirm or decline the updated request.</p>
             <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
           </div>`;
-        if (req.body.rescheduled_by === 'mentor' && p.mentee_email) sendEmail(p.mentee_email, 'Your session has been rescheduled', emailHtml(p.mentee_name)).catch(() => {});
-        if (req.body.rescheduled_by === 'mentee' && p.mentor_email) sendEmail(p.mentor_email, 'Your session has been rescheduled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+        if (req.body.rescheduled_by === 'mentor' && p.mentee_email) {
+          sendEmail(p.mentee_email, 'Your session has been rescheduled', emailHtml(p.mentee_name)).catch(() => {});
+          if (p.mentee_user_id) sendPushNotification(p.mentee_user_id, 'Session Rescheduled', `${p.mentor_name || 'Your mentor'} proposed a new time: ${newDate} at ${newTime}.`).catch(() => {});
+        }
+        if (req.body.rescheduled_by === 'mentee' && p.mentor_email) {
+          sendEmail(p.mentor_email, 'Your session has been rescheduled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+          if (p.mentor_user_id) sendPushNotification(p.mentor_user_id, 'Session Rescheduled', `${p.mentee_name} proposed a new time: ${newDate} at ${newTime}.`).catch(() => {});
+        }
       }
     } else {
       // Status-only update (confirm / decline / cancel)
@@ -896,6 +941,7 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
               <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
             </div>`;
           sendEmail(p.mentee_email, `Your session is confirmed — ${p.mentor_name || 'NAAMA Mentor Connect'}`, html).catch(() => {});
+          if (p.mentee_user_id) sendPushNotification(p.mentee_user_id, 'Session Confirmed!', `${p.mentor_name || 'Your mentor'} confirmed your session on ${p.meeting_date} at ${p.meeting_time}.`).catch(() => {});
         }).catch(err => console.error('Session confirm email error:', err.message));
       }
       // Send cancellation notifications
@@ -912,8 +958,14 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
               <p style="color:#8a9ab0;">You can schedule a new session from your dashboard.</p>
               <p style="color:#4a9b8e;margin-top:20px;">— NAAMA Mentor Connect</p>
             </div>`;
-          if (req.body.cancelled_by === 'mentor' && p.mentee_email) sendEmail(p.mentee_email, 'Your session has been cancelled', emailHtml(p.mentee_name)).catch(() => {});
-          if (req.body.cancelled_by === 'mentee' && p.mentor_email) sendEmail(p.mentor_email, 'Your session has been cancelled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+          if (req.body.cancelled_by === 'mentor' && p.mentee_email) {
+            sendEmail(p.mentee_email, 'Your session has been cancelled', emailHtml(p.mentee_name)).catch(() => {});
+            if (p.mentee_user_id) sendPushNotification(p.mentee_user_id, 'Session Cancelled', `${p.mentor_name || 'Your mentor'} cancelled your session on ${p.meeting_date}.`).catch(() => {});
+          }
+          if (req.body.cancelled_by === 'mentee' && p.mentor_email) {
+            sendEmail(p.mentor_email, 'Your session has been cancelled', emailHtml(p.mentor_name || 'Mentor')).catch(() => {});
+            if (p.mentor_user_id) sendPushNotification(p.mentor_user_id, 'Session Cancelled', `${p.mentee_name} cancelled the session on ${p.meeting_date}.`).catch(() => {});
+          }
         }
       }
     }
@@ -985,6 +1037,35 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ── STARTUP MIGRATIONS ────────────────────────────────────────────────────────
+// ── PUSH SUBSCRIPTION ENDPOINTS ───────────────────────────────────────────────
+app.get('/api/push/vapid-key', (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
+app.post('/api/push/subscribe', authMiddleware, async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    if (!subscription) return res.status(400).json({ error: 'Subscription required' });
+    await pool.query(
+      `INSERT INTO push_subscriptions (user_id, subscription) VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET subscription = $2`,
+      [req.user.userId, JSON.stringify(subscription)]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/push/subscribe', authMiddleware, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1', [req.user.userId]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 async function runMigrations() {
   try {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true`);
@@ -996,6 +1077,15 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE connections ADD COLUMN IF NOT EXISTS is_collab BOOLEAN DEFAULT false`);
     await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT '{}'`);
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT '{}'`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        subscription JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id)
+      )
+    `);
 
     // Step 1: Delete connections for mentors whose linked user account is gone
     // (must happen BEFORE deleting the mentor rows to satisfy the FK constraint)

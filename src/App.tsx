@@ -2611,6 +2611,12 @@ export default function App() {
   const [editError, setEditError] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(() => {
+    if (typeof Notification === 'undefined') return 'unsupported';
+    return Notification.permission;
+  });
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
   const prevRequestsLen = useRef(0);
 
   useEffect(() => {
@@ -3620,6 +3626,55 @@ export default function App() {
               Edit Profile
             </button>
           </div>
+
+          {pushPermission !== 'unsupported' && (
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--white)', marginBottom: 3 }}>Push Notifications</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                  {pushPermission === 'denied'
+                    ? 'Blocked in browser — enable in your device settings'
+                    : pushSubscribed
+                    ? 'You\'ll get notified for connections & sessions'
+                    : 'Get notified for connections & sessions'}
+                </div>
+              </div>
+              {pushPermission !== 'denied' && (
+                <button
+                  disabled={pushLoading}
+                  onClick={async () => {
+                    setPushLoading(true);
+                    try {
+                      if (pushSubscribed) {
+                        const reg = await navigator.serviceWorker.ready;
+                        const sub = await reg.pushManager.getSubscription();
+                        if (sub) await sub.unsubscribe();
+                        await fetch('/api/push/subscribe', { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+                        setPushSubscribed(false);
+                        showToast('Push notifications disabled.');
+                      } else {
+                        const perm = await Notification.requestPermission();
+                        setPushPermission(perm);
+                        if (perm !== 'granted') { setPushLoading(false); return; }
+                        const { publicKey } = await fetch('/api/push/vapid-key').then(r => r.json());
+                        const reg = await navigator.serviceWorker.ready;
+                        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey });
+                        await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ subscription: sub }) });
+                        setPushSubscribed(true);
+                        showToast('Push notifications enabled!');
+                      }
+                    } catch (e) {
+                      showToast('Could not update notification settings.');
+                    }
+                    setPushLoading(false);
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: 9, border: 'none', cursor: pushLoading ? 'default' : 'pointer', fontSize: 12, fontWeight: 700, minHeight: 36, background: pushSubscribed ? 'transparent' : 'var(--gold)', color: pushSubscribed ? 'var(--text-dim)' : 'var(--navy)', outline: pushSubscribed ? '1px solid var(--border)' : 'none', opacity: pushLoading ? 0.5 : 1 }}
+                >
+                  {pushLoading ? '...' : pushSubscribed ? 'Turn Off' : 'Enable'}
+                </button>
+              )}
+            </div>
+          )}
 
           <div style={{ marginTop: 12, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <button
