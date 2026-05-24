@@ -2014,6 +2014,8 @@ function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, pro
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -2129,12 +2131,22 @@ function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, pro
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+            <div style={{ position: 'relative' }}>
+              <input className="form-input" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} style={{ paddingRight: 40 }} />
+              <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 16, padding: 2, lineHeight: 1 }} title={showPassword ? 'Hide password' : 'Show password'}>
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
           {mode === 'signup' && (
             <div className="form-group">
               <label className="form-label">Confirm Password</label>
-              <input className="form-input" type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+              <div style={{ position: 'relative' }}>
+                <input className="form-input" type={showConfirm ? 'text' : 'password'} placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} style={{ paddingRight: 40 }} />
+                <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 16, padding: 2, lineHeight: 1 }} title={showConfirm ? 'Hide password' : 'Show password'}>
+                  {showConfirm ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
           )}
           <button className="auth-submit" disabled={loading} onClick={submit}>
@@ -2182,11 +2194,21 @@ function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, pro
           {!success && (<>
             <div className="form-group">
               <label className="form-label">New Password</label>
-              <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitReset()} />
+              <div style={{ position: 'relative' }}>
+                <input className="form-input" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitReset()} style={{ paddingRight: 40 }} />
+                <button type="button" onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 16, padding: 2, lineHeight: 1 }} title={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Confirm Password</label>
-              <input className="form-input" type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitReset()} />
+              <div style={{ position: 'relative' }}>
+                <input className="form-input" type={showConfirm ? 'text' : 'password'} placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitReset()} style={{ paddingRight: 40 }} />
+                <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 16, padding: 2, lineHeight: 1 }} title={showConfirm ? 'Hide password' : 'Show password'}>
+                  {showConfirm ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             <button className="auth-submit" disabled={loading} onClick={submitReset}>
               {loading ? 'Saving…' : 'Set New Password →'}
