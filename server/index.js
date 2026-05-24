@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import webpush from 'web-push';
+import nodemailer from 'nodemailer';
 
 const { Pool } = pg;
 const app = express();
@@ -14,6 +15,26 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = process.env.JWT_SECRET || 'naama-connect-secret-key-2025';
 
+
+const SMTP_USER = (process.env.SMTP_USER || 'naamamentorconnect@gmail.com').trim();
+const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s/g, '');
+const mailer = SMTP_PASS
+  ? nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+  : null;
+
+async function sendEmail(to, subject, html) {
+  if (!mailer) return;
+  try {
+    await mailer.sendMail({ from: `"NAAMA Mentor Connect" <${SMTP_USER}>`, to, subject, html });
+  } catch (e) {
+    console.error('[SMTP] Send error:', e.message);
+  }
+}
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -86,6 +107,27 @@ app.post('/api/auth/signup', async (req, res) => {
     const user = rows[0];
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
     res.status(201).json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id } });
+
+    // Welcome email (fire-and-forget)
+    sendEmail(
+      user.email,
+      'Welcome to NAAMA Mentor Connect!',
+      `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1e3a5f;color:#fff;border-radius:16px;">
+        <h1 style="color:#c9a84c;margin:0 0 8px;">Welcome to NAAMA Mentor Connect</h1>
+        <p style="color:#8a9ab0;margin:0 0 20px;">Your account has been created successfully.</p>
+        <p style="color:#e0e8f0;margin:0 0 16px;">
+          You now have access to a network of Arab American medical professionals ready to guide, collaborate, and grow with you.
+        </p>
+        <p style="color:#e0e8f0;margin:0 0 24px;">
+          Complete your profile, explore mentors in your specialty, and send your first connection request to get started.
+        </p>
+        <a href="https://naamamentorconnect.replit.app"
+           style="display:inline-block;padding:12px 28px;background:#c9a84c;color:#1e3a5f;border-radius:10px;font-weight:700;text-decoration:none;font-size:15px;">
+          Go to My Dashboard
+        </a>
+        <p style="color:#4a9b8e;margin:28px 0 0;font-size:13px;">— The NAAMA Mentor Connect Team</p>
+      </div>`
+    ).catch(() => {});
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
