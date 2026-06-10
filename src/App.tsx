@@ -2669,11 +2669,15 @@ export default function App() {
       .finally(() => setAuthChecked(true));
   }, []);
 
-  useEffect(() => {
+  const loadMentors = () => {
     fetch('/api/mentors')
       .then(r => r.json())
       .then(data => { if (Array.isArray(data) && data.length > 0) setMentors(data); })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadMentors();
   }, []);
 
   const fetchScheduleRequests = () => {
@@ -3760,6 +3764,7 @@ export default function App() {
                   });
                   if (!res.ok) { const d = await res.json(); setEditError(d.error || 'Failed to save.'); setEditSaving(false); return; }
                   setProfile(updated);
+                  loadMentors();
                   setShowEditProfile(false);
                 } catch {
                   setEditError('Network error. Please try again.');

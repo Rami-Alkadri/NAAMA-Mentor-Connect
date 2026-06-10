@@ -426,10 +426,15 @@ app.put('/api/profiles/:id', async (req, res) => {
       [p.name, p.initials, p.role, p.category, p.specialty, p.subfield, p.level, p.year, p.tags || [], p.state || '', p.institution || '', p.isIMG || false, p.avatarGrad || '', p.photo || '', p.bio || '', p.specialties || [], req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    // Sync years_exp and year_set_date on the linked mentor row if one exists
+    // Keep the linked mentor directory row in sync with the edited profile
     await pool.query(
-      `UPDATE mentors SET years_exp=$1, year_set_date=CURRENT_DATE WHERE linked_user_id = (SELECT id FROM users WHERE profile_id = $2)`,
-      [parseInt(p.year) || 0, req.params.id]
+      `UPDATE mentors SET name=$1, initials=$2, role=$3, level=$4, category=$5, specialty=$6, subfield=$7,
+         institution=$8, state=$9, bio=$10, tags=$11, is_img=$12, avatar_grad=$13, photo=$14,
+         specialties=$15, years_exp=$16, year_set_date=CURRENT_DATE
+       WHERE linked_user_id = (SELECT id FROM users WHERE profile_id = $17)`,
+      [p.name, p.initials, p.role, p.level, p.category, p.specialty, p.subfield,
+       p.institution || '', p.state || '', p.bio || '', p.tags || [], p.isIMG || false,
+       p.avatarGrad || '', p.photo || '', p.specialties || [], parseInt(p.year) || 0, req.params.id]
     );
     res.json(rows[0]);
   } catch (e) {

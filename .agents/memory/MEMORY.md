@@ -1,1 +1,2 @@
 - [Scheduled jobs on autoscale](scheduled-jobs.md) — autoscale sleeps when idle so in-process cron is unreliable; use a separate Scheduled Deployment (a repl can run both).
+- [Profile↔mentor directory sync](profile-mentor-sync.md) — mentor card/modal read the `mentors` table; profile edits must sync ALL display fields (bio etc.) in PUT /api/profiles/:id, not just years.
