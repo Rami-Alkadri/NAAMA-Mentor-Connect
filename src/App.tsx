@@ -1180,7 +1180,7 @@ function Onboarding({ onComplete }: { onComplete: (p: Profile) => void }) {
             </div>
             <div className="img-toggle" onClick={() => setIsIMG((p) => !p)}>
               <div className="img-toggle-label">
-                Are you an IMG (International Medical Graduate)?
+                Are you an International Graduate?
                 <span>
                   Check this if you received your medical degree outside the
                   US/Canada
@@ -1449,7 +1449,7 @@ function SearchBar({
           className={`img-filter-tag${imgOnly ? ' active' : ''}`}
           onClick={() => setImgOnly((p: boolean) => !p)}
         >
-          🌐 IMG
+          🌐 International Graduate
         </button>
         {(query || categoryFilter || specialtyFilter || levelFilter || stateFilter || imgOnly) && (
           <button className="clear-btn" onClick={onClear}>
@@ -2049,7 +2049,7 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
           </select>
         </div>
         <div className="img-toggle" onClick={() => setIsIMG(p => !p)}>
-          <div className="img-toggle-label">International Medical Graduate (IMG)<span>I obtained my medical degree outside the US/Canada</span></div>
+          <div className="img-toggle-label">International Graduate<span>I obtained my medical degree outside the US/Canada</span></div>
           <div className={`toggle-switch${isIMG ? ' on' : ''}`}><div className="toggle-knob" /></div>
         </div>
         {availTags.length > 0 && (
@@ -2515,7 +2515,7 @@ function AdminPanel() {
       {activeSection === 'mentors' && (
         <div style={{ overflowX: 'auto' }}>
           <table className="admin-table">
-            <thead><tr><th>Name</th><th>Specialty</th><th>Institution</th><th>State</th><th>Level</th><th>IMG</th><th>Mentees</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Specialty</th><th>Institution</th><th>State</th><th>Level</th><th>International Graduate</th><th>Mentees</th><th></th></tr></thead>
             <tbody>
               {data.mentors.map((m: any) => (
                 <tr key={m.id}>
@@ -2906,7 +2906,7 @@ export default function App() {
       s(m.bio).includes(q) ||
       (Array.isArray(m.tags) && m.tags.some((t: string) => s(t).includes(q))) ||
       (Array.isArray(m.specialties) && m.specialties.some((sp: string) => s(sp).includes(q))) ||
-      (m.isIMG && 'img'.includes(q));
+      (m.isIMG && ('international graduate'.includes(q) || 'img'.includes(q)));
     const matchCat = !categoryFilter || m.category === categoryFilter;
     const matchSpecialty = !specialtyFilter ||
       (Array.isArray(m.specialties) && m.specialties.includes(specialtyFilter)) ||
@@ -3099,7 +3099,7 @@ export default function App() {
                         }}
                       >
                         <div className="mentor-name">{m.name}</div>
-                        {m.isIMG && <span className="img-badge">IMG</span>}
+                        {m.isIMG && <span className="img-badge">International Graduate</span>}
                       </div>
                       <div className="mentor-role-text">
                         {m.level || m.role}
@@ -3576,7 +3576,7 @@ export default function App() {
                     className="img-badge"
                     style={{ fontSize: 11, padding: '3px 10px' }}
                   >
-                    IMG
+                    International Graduate
                   </span>
                 )}
               </div>
@@ -3861,7 +3861,7 @@ export default function App() {
                 >
                   <div className="modal-name">{selectedMentor.name}</div>
                   {selectedMentor.isIMG && (
-                    <span className="img-badge">IMG</span>
+                    <span className="img-badge">International Graduate</span>
                   )}
                 </div>
                 {(selectedMentor.level || selectedMentor.role) && (
