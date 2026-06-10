@@ -269,21 +269,25 @@ const styles = `
     #root { overflow-x:hidden; }
 
     @media (max-width: 640px) {
-      /* Nav — compact single row */
-      .nav { display:flex; padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top, 0px)); flex-wrap:nowrap; gap:8px; justify-content:space-between; }
+      /* Nav — logo/bell/avatar on row 1, scrollable tabs pill on row 2 (matches tablet/landscape) */
+      .nav { display:grid; grid-template-columns:1fr auto auto; padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top, 0px)); gap:10px 8px; }
+      .nav > :nth-child(1) { grid-column:1; grid-row:1; }
+      .nav > :nth-child(2) { grid-column:1 / -1; grid-row:2; justify-content:flex-start; }
+      .nav > :nth-child(3) { grid-column:2; grid-row:1; justify-self:end; }
+      .nav > :nth-child(4) { grid-column:3; grid-row:1; justify-self:end; }
       .nav-logo { font-size:13px; }
       .nav-logo-sub { display:none; }
       .nav-naama-logo { height:30px !important; }
 
-      /* Tabs → fixed bottom bar */
-      .nav-tabs { position:fixed; bottom:0; left:0; right:0; width:100% !important; order:0; z-index:99; background:rgba(23,47,78,0.97); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-top:1px solid var(--border); border-radius:0; padding:6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:2px; justify-content:stretch; }
+      /* Tabs → scrollable top pill */
+      .nav-tabs { position:static; width:auto; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:4px; gap:3px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; justify-content:flex-start; }
       .nav-tabs::-webkit-scrollbar { display:none; }
-      .nav-tab { flex:1; min-width:52px; padding:8px 4px; font-size:11px; white-space:nowrap; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; }
-      .role-toggle { order:0; flex-shrink:0; }
+      .nav-tab { flex:0 0 auto; padding:7px 14px; font-size:12px; white-space:nowrap; min-height:38px; display:flex; align-items:center; justify-content:center; border-radius:7px; }
+      .role-toggle { flex-shrink:0; }
       .role-toggle-btn { padding:6px 10px; font-size:11px; min-height:34px; }
 
-      /* Page layout — extra bottom padding for fixed tab bar */
-      .page { padding:16px 14px calc(80px + env(safe-area-inset-bottom, 0px)); }
+      /* Page layout */
+      .page { padding:16px 14px calc(28px + env(safe-area-inset-bottom, 0px)); }
       .page-title { font-size:22px; }
       .page-sub { font-size:12px; margin-bottom:16px; }
 
@@ -342,13 +346,13 @@ const styles = `
       .tag-toggle { min-height:36px; padding:7px 12px; }
 
       /* Notifications panel — full width on mobile */
-      .notif-panel { left:8px; right:8px; width:auto; top:calc(54px + env(safe-area-inset-top, 0px)); }
+      .notif-panel { left:8px; right:8px; width:auto; top:calc(108px + env(safe-area-inset-top, 0px)); }
 
       /* Dual role banner */
       .dual-role-banner { padding:10px 12px; }
 
-      /* Toast — above bottom tab bar on mobile */
-      .toast { left:16px; right:16px; transform:none; text-align:center; white-space:normal; border-radius:14px; bottom:calc(72px + env(safe-area-inset-bottom, 0px)); }
+      /* Toast */
+      .toast { left:16px; right:16px; transform:none; text-align:center; white-space:normal; border-radius:14px; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); }
     }
 
     @media (max-width: 400px) {
