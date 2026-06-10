@@ -30,6 +30,7 @@ npm run dev        # Frontend only
 npm run dev:server # Backend only
 npm run build      # Build for production
 npm start          # Production server (serves static + API on port 5000)
+npm run digest     # Send each user a daily email summary of their notifications
 ```
 
 ## Database Tables
@@ -66,6 +67,16 @@ Access the admin panel by adding `?admin=true` to the URL after logging in. This
 - User profile management
 - Connection tracking
 - Session request management
+
+## Daily Notification Digest
+
+`server/dailyDigest.js` (run via `npm run digest`) emails each active user a summary of **their own** outstanding notifications — pending mentorship/collaboration requests received, pending session requests received, and unread messages. Users with no notifications are skipped. Supports `--dry-run` (prints what would be sent without emailing).
+
+To run it automatically at 23:00 Central daily, create a **Scheduled Deployment** (Publishing → Scheduled, separate from the autoscale web app — a repl can have both):
+- Command: `npm run digest`
+- Schedule: every day at 11:00 PM, timezone `America/Chicago`
+
+> Note: the web app runs on an **autoscale** deployment, which sleeps when idle, so an in-process timer cannot reliably fire at 23:00. The Scheduled Deployment is the reliable mechanism.
 
 ## Features
 

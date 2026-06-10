@@ -1,0 +1,1 @@
+- [Scheduled jobs on autoscale](scheduled-jobs.md) — autoscale sleeps when idle so in-process cron is unreliable; use a separate Scheduled Deployment (a repl can run both).
