@@ -125,7 +125,6 @@ const styles = `
     .mentor-role-text { font-size:11px; color:var(--gold-light); font-weight:500; }
     .mentor-subfield { font-size:10px; color:var(--text-dim); margin-top:1px; font-style:italic; }
     .mentor-inst { font-size:10px; color:var(--text-dim); margin-top:2px; }
-    .match-badge { background:rgba(74,155,142,0.18); border:1px solid rgba(74,155,142,0.4); color:var(--accent-teal); font-size:10px; font-weight:600; padding:3px 8px; border-radius:100px; white-space:nowrap; margin-left:auto; }
     .img-badge { background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; font-size:10px; font-weight:600; padding:2px 7px; border-radius:100px; margin-left:4px; }
     .mentor-bio { font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.5; }
     .tags { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px; }
@@ -3114,7 +3113,6 @@ export default function App() {
                         {m.institution} {m.state && `· ${m.state}`}
                       </div>
                     </div>
-                    <div className="match-badge">{m.match}%</div>
                   </div>
                   <div className="mentor-bio">{m.bio.slice(0, 85)}…</div>
                   <div className="tags">
@@ -3885,7 +3883,6 @@ export default function App() {
             </div>
             <div className="modal-stats">
               {[
-                ['Match', selectedMentor.match + '%'],
                 ['Mentees', selectedMentor.mentees],
                 ['Sessions', selectedMentor.sessions],
                 ['Exp.', computeExperience(selectedMentor.years, selectedMentor.yearSetDate) + 'y'],
