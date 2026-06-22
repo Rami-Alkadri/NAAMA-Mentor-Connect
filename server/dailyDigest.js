@@ -1,5 +1,5 @@
 // Daily notification digest.
-// Run by a Replit Scheduled Deployment (e.g. every day at 23:00 America/Chicago).
+// Run by a Replit Scheduled Deployment (e.g. every day at 23:00 ET / America/New_York).
 // Sends each active user an email summarizing THEIR own outstanding notifications:
 //   - pending connection / collaboration requests they received
 //   - pending session requests they received
