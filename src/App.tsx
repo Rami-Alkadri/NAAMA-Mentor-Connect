@@ -144,6 +144,7 @@ const styles = `
     .rel-role { font-size:11px; color:var(--gold-light); margin-top:2px; }
     .rel-last { font-size:10px; color:var(--text-dim); margin-top:3px; }
     .rel-actions { display:flex; gap:8px; margin-left:auto; }
+    .rel-clickable:hover .rel-name { color:var(--gold-light); text-decoration:underline; }
     .rel-btn { padding:6px 12px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; }
     .rel-btn.primary { background:var(--gold); color:var(--navy); }
     .rel-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--text-dim); }
@@ -2598,6 +2599,83 @@ function AdminPanel() {
   );
 }
 
+function menteeProfileFromConn(conn: any) {
+  return {
+    name: conn.mentee_name || 'Mentee',
+    initials: conn.mentee_initials || '?',
+    photo: conn.mentee_photo || '',
+    avatarGrad: conn.mentee_avatar_grad || 'linear-gradient(135deg,#4a9b8e,#2d6a62)',
+    isIMG: conn.mentee_is_img,
+    role: conn.mentee_role,
+    level: conn.mentee_level,
+    subfield: conn.mentee_subfield,
+    specialty: conn.mentee_specialty,
+    specialties: conn.mentee_specialties,
+    institution: conn.mentee_institution,
+    state: conn.mentee_state,
+    bio: conn.mentee_bio,
+    category: conn.mentee_category,
+    tags: conn.mentee_tags || [],
+  };
+}
+
+function ProfileSummaryModal({ profile, onClose }: { profile: any; onClose: () => void }) {
+  const specs = Array.isArray(profile.specialties) && profile.specialties.length
+    ? profile.specialties
+    : profile.specialty ? [profile.specialty] : [];
+  const tags = Array.isArray(profile.tags) ? profile.tags : [];
+  const cat = CATEGORIES.find((c) => c.id === profile.category);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Avatar
+            photo={profile.photo}
+            initials={profile.initials}
+            grad={profile.avatarGrad}
+            size={64}
+            radius={16}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <div className="modal-name">{profile.name}</div>
+              {profile.isIMG && <span className="img-badge">International Graduate</span>}
+            </div>
+            {(profile.level || profile.role) && (
+              <div className="modal-role-text">{profile.level || profile.role}</div>
+            )}
+            {profile.subfield && <div className="modal-subfield">{profile.subfield}</div>}
+            {specs.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
+                {specs.map((s: string) => <span key={s} className="spec-chip-profile">{s}</span>)}
+              </div>
+            )}
+            {(profile.institution || profile.state) && (
+              <div className="modal-inst">
+                {profile.institution}
+                {profile.institution && profile.state ? ' · ' : ''}
+                {profile.state}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="modal-sec">About</div>
+        <div className="modal-bio-text">{profile.bio ? profile.bio : 'No bio provided yet.'}</div>
+        {(cat || tags.length > 0) && (
+          <>
+            <div className="modal-sec">Focus Areas</div>
+            <div className="tags">
+              {cat && <span className="category-tag">{cat.icon} {cat.label}</span>}
+              {tags.map((t: string) => <span key={t} className="tag">{t}</span>)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileId, setProfileId] = useState<number | null>(null);
@@ -2611,6 +2689,7 @@ export default function App() {
   const [chatConn, setChatConn] = useState<any | null>(null);
   const [menteeConnTab, setMenteeConnTab] = useState<'active' | 'declined'>('active');
   const [selectedMentor, setSelectedMentor] = useState<any>(null);
+  const [selectedMentee, setSelectedMentee] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [toastMsg, setToastMsg] = useState('');
   const [query, setQuery] = useState('');
@@ -3217,12 +3296,19 @@ export default function App() {
                       {conn.status === 'accepted' && (
                         <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                       )}
-                      <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
-                      <div style={{ flex: 1 }}>
-                        <div className="rel-name">{displayName}</div>
-                        {displaySpecialty && <div className="rel-role">{displaySpecialty}</div>}
-                        <div className="rel-last" style={{ color: !isActive ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                          {!isActive ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : isSent ? '⏳ Awaiting acceptance' : '⏳ Pending your acceptance'}
+                      <div
+                        className={isSent ? undefined : 'rel-clickable'}
+                        title={isSent ? undefined : 'View profile'}
+                        onClick={isSent ? undefined : () => setSelectedMentee(menteeProfileFromConn(conn))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: isSent ? 'default' : 'pointer' }}
+                      >
+                        <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="rel-name">{displayName}</div>
+                          {displaySpecialty && <div className="rel-role">{displaySpecialty}</div>}
+                          <div className="rel-last" style={{ color: !isActive ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                            {!isActive ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : isSent ? '⏳ Awaiting acceptance' : '⏳ Pending your acceptance'}
+                          </div>
                         </div>
                       </div>
                       <div className="rel-actions">
@@ -3342,11 +3428,13 @@ export default function App() {
                     {conn.status === 'accepted' && (
                       <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                     )}
-                    <Avatar photo={conn.mentee_photo || ''} initials={conn.mentee_initials || '?'} grad="linear-gradient(135deg,#4a9b8e,#2d6a62)" size={44} radius={11} />
-                    <div style={{ flex: 1 }}>
-                      <div className="rel-name">{conn.mentee_name || 'Mentee'}</div>
-                      <div className="rel-last" style={{ color: !conn.mentee_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                        {!conn.mentee_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : conn.status === 'declined' ? 'Declined' : '⏳ Pending your acceptance'}
+                    <div className="rel-clickable" title="View profile" onClick={() => setSelectedMentee(menteeProfileFromConn(conn))} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                      <Avatar photo={conn.mentee_photo || ''} initials={conn.mentee_initials || '?'} grad="linear-gradient(135deg,#4a9b8e,#2d6a62)" size={44} radius={11} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="rel-name">{conn.mentee_name || 'Mentee'}</div>
+                        <div className="rel-last" style={{ color: !conn.mentee_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                          {!conn.mentee_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : conn.status === 'declined' ? 'Declined' : '⏳ Pending your acceptance'}
+                        </div>
                       </div>
                     </div>
                     <div className="rel-actions">
@@ -3931,6 +4019,10 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {selectedMentee && (
+        <ProfileSummaryModal profile={selectedMentee} onClose={() => setSelectedMentee(null)} />
       )}
 
       {tab === 'admin' && isAdmin && <AdminPanel />}
