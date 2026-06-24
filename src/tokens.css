@@ -1,0 +1,123 @@
+/*
+ * NAAMA Mentor Connect — design tokens
+ *
+ * Single source of truth for colors, type, spacing, and radius.
+ * This file CAPTURES the current design exactly as it renders today — it is
+ * purely additive and changes nothing visually. Adopting these tokens inside
+ * src/App.tsx (replacing hardcoded hex/rgba/px with var(--token)) is a separate
+ * follow-up.
+ *
+ * Note: the codebase currently carries two parallel palettes — the hex vars
+ * (--gold #e0bd5b etc.) and the rgba() overlay bases (#c9a84c etc.). Both are
+ * preserved here on purpose. Reconciling them is a deliberate future decision.
+ */
+
+:root {
+  /* ===== Colors ===== */
+
+  /* ----- Existing :root vars (verbatim from App.tsx) ----- */
+  --navy: #13294a;
+  --navy-mid: #264d7a;
+  --navy-deep: #0c1d36;
+  --gold: #e0bd5b;
+  --gold-light: #f0d27d;
+  --text-dim: #b8c5d6;
+  --accent-teal: #5fb3a4;
+  --white: #ffffff;
+  --card-bg: rgba(255, 255, 255, 0.07);
+  --border: rgba(224, 189, 91, 0.35);   /* 224,189,91 == #e0bd5b == --gold */
+  --error: #f06b4a;
+
+  /* ----- Overlay base palette (the SECOND palette used by rgba() overlays) -----
+     Kept separate on purpose: these differ from the hex vars above. Exposed as
+     bare RGB channel triples so existing rgba(201,168,76,0.x) call sites can
+     later become rgba(var(--gold-overlay-rgb), 0.x) with identical output. */
+  --gold-overlay-rgb: 201, 168, 76;     /* #c9a84c — gold tags/buttons/hovers */
+  --teal-overlay-rgb: 74, 155, 142;     /* #4a9b8e — teal badges/success/hovers */
+  --error-overlay-rgb: 224, 90, 58;     /* #e05a3a — error/decline backgrounds */
+  --navy-overlay-rgb: 13, 27, 42;       /* navbar/modal/headshot overlays */
+  --white-rgb: 255, 255, 255;           /* card-bg & white layering 0.02–0.09 */
+  --black-rgb: 0, 0, 0;                 /* shadows 0.30 / 0.55 */
+  --red-light-rgb: 255, 80, 80;         /* #ff5050 error highlight */
+
+  /* ----- Gradient / avatar accent palette (currently hardcoded hexes) ----- */
+  --grad-gold: #c9a84c;
+  --grad-amber: #e8a83c;
+  --grad-teal: #4a9b8e;
+  --grad-teal-dark: #2a7a6e;
+  --grad-teal-darker: #2d6a62;
+  --teal-accent: #1aa886;
+  --grad-purple: #8b5cf6;
+  --grad-purple-bright: #a78bfa;
+  --grad-purple-dark: #6d3fc8;
+  --grad-pink: #ec4899;
+  --grad-pink-dark: #9c2c6e;
+  --grad-amber-warm: #f59e0b;
+  --grad-amber-warm-dark: #d97706;
+
+  /* ===== Typography ===== */
+
+  /* Type scale (px values are exactly those already in use) */
+  --fs-2xs: 9px;
+  --fs-xs: 10px;
+  --fs-sm: 11px;
+  --fs-base: 12px;
+  --fs-md: 13px;
+  --fs-lg: 14px;
+  --fs-xl: 16px;
+  --fs-2xl: 18px;
+  --fs-3xl-alt: 19px;   /* 19px appears 3×; kept exact rather than folded */
+  --fs-3xl: 20px;
+  --fs-4xl: 22px;
+  --fs-5xl: 24px;
+  --fs-6xl: 28px;
+  --fs-7xl: 34px;
+
+  /* Families */
+  --font-serif: 'Playfair Display', serif;   /* headings/branding */
+  --font-sans: 'DM Sans', sans-serif;        /* body/inputs */
+
+  /* Weights in use */
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ===== Spacing ===== */
+
+  /* Spacing scale (exact px already in use) */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 18px;
+  --space-10: 20px;
+  --space-12: 24px;
+  --space-16: 32px;
+  --space-20: 40px;
+
+  /* odd one-offs kept available for exact preservation during adoption */
+  --space-3px: 3px;
+  --space-5px: 5px;
+  --space-7px: 7px;
+  --space-9px: 9px;
+  --space-11px: 11px;
+
+  /* ===== Radius ===== */
+
+  /* Radius scale (exact px already in use) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 24px;
+  --radius-pill: 100px;
+}

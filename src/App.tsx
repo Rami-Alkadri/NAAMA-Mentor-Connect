@@ -145,6 +145,75 @@ const styles = `
     .rel-last { font-size:10px; color:var(--text-dim); margin-top:3px; }
     .rel-actions { display:flex; gap:8px; margin-left:auto; }
     .rel-clickable:hover .rel-name { color:var(--gold-light); text-decoration:underline; }
+
+    /* ===== Discover — "The Almanac" redesign (scoped to .discover-page; tokens + foundation language only) ===== */
+    .discover-eyebrow { font-family:'DM Mono',monospace; font-weight:500; font-size:var(--fs-xs); letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:var(--space-6); }
+    .discover-page .page-title { font-size:var(--fs-7xl); letter-spacing:-0.01em; margin-bottom:var(--space-3); }
+    .discover-page .page-sub { font-size:var(--fs-lg); color:var(--text-dim); margin-bottom:var(--space-10); max-width:54ch; }
+
+    /* search + filters */
+    .discover-page .search-wrap { margin-bottom:var(--space-10); }
+    .discover-page .search-input { border-radius:var(--radius-lg); font-size:var(--fs-md); padding:var(--space-6) var(--space-8) var(--space-6) 44px; }
+    .discover-page .filter-row { gap:var(--space-3); }
+    .discover-page .filter-select { border-radius:var(--radius-md); font-size:var(--fs-sm); padding:var(--space-4) var(--space-6); }
+    .discover-page .img-filter-tag, .discover-page .clear-btn { border-radius:var(--radius-pill); font-size:var(--fs-sm); }
+
+    /* results count → mono label trailed by a gold hairline */
+    .discover-page .results-count { display:flex; align-items:center; gap:var(--space-6); font-family:'DM Mono',monospace; font-size:var(--fs-xs); letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); margin-bottom:var(--space-8); }
+    .discover-page .results-count::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* grid + card */
+    .discover-page .mentor-grid { gap:var(--space-8); grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+    .discover-page .mentor-card { display:flex; flex-direction:column; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-2xl); padding:var(--space-12); transition:border-color 0.2s ease, background 0.2s ease, transform 0.2s ease; }
+    .discover-page .mentor-card::before { display:none; } /* drop gold→teal bar — restraint */
+    .discover-page .mentor-card:hover { border-color:rgba(var(--gold-overlay-rgb),0.5); background:rgba(var(--white-rgb),0.09); transform:translateY(-2px); }
+    .discover-page .mentor-card-top { gap:var(--space-6); margin-bottom:var(--space-7); }
+    .discover-page .mentor-name { font-size:var(--fs-3xl); margin-bottom:2px; }
+    .discover-page .mentor-role-text { font-size:var(--fs-sm); color:var(--gold-light); }
+    .discover-page .mentor-subfield { font-size:var(--fs-xs); font-style:normal; color:var(--text-dim); }
+    .discover-page .mentor-inst { font-size:var(--fs-xs); }
+    .discover-page .mentor-bio { font-size:var(--fs-sm); line-height:1.6; margin:var(--space-6) 0; }
+    .discover-page .img-badge { background:transparent; border:1px solid var(--border); color:var(--gold); font-family:'DM Mono',monospace; font-weight:500; font-size:var(--fs-2xs); letter-spacing:0.06em; text-transform:uppercase; border-radius:var(--radius-xs); padding:2px var(--space-3); }
+
+    /* category as DM Mono eyebrow; tags as quiet hairline pills */
+    .discover-page .tags { gap:var(--space-3); margin-bottom:var(--space-7); align-items:center; }
+    .discover-page .category-tag { font-family:'DM Mono',monospace; letter-spacing:0.12em; text-transform:uppercase; font-size:var(--fs-2xs); font-weight:500; background:transparent; border:none; padding:0; color:var(--gold); }
+    .discover-page .tag { font-size:var(--fs-2xs); border-radius:var(--radius-xs); background:rgba(var(--white-rgb),0.04); border:1px solid var(--border); color:var(--text-dim); padding:2px var(--space-4); font-weight:500; }
+
+    /* stats + connect button (gold fill = the one bold element; matched = semantic teal) */
+    .discover-page .card-bottom { padding-top:var(--space-7); margin-top:auto; border-top:1px solid var(--border); }
+    .discover-page .card-stats { gap:var(--space-8); }
+    .discover-page .stat-val { font-size:var(--fs-lg); }
+    .discover-page .stat-label { font-family:'DM Mono',monospace; font-size:var(--fs-2xs); letter-spacing:0.1em; }
+    .discover-page .connect-btn { padding:var(--space-4) var(--space-7); border-radius:var(--radius-md); font-size:var(--fs-sm); font-weight:600; }
+    .discover-page .connect-btn:hover { background:var(--gold-light); }
+    .discover-page .connect-btn.requested { background:rgba(var(--teal-overlay-rgb),0.15); border:1px solid rgba(var(--teal-overlay-rgb),0.3); color:var(--accent-teal); }
+
+    /* empty state — editorial, not a big emoji */
+    .discover-page .empty { border:1px dashed var(--border); border-radius:var(--radius-2xl); background:rgba(var(--white-rgb),0.02); padding:var(--space-20) var(--space-10); }
+    .discover-page .empty-icon { font-size:var(--fs-6xl); opacity:0.7; }
+    .discover-page .empty-title { font-size:var(--fs-2xl); }
+
+    /* skeleton loading */
+    .discover-page .skel-card { display:flex; flex-direction:column; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-2xl); padding:var(--space-12); }
+    .discover-page .skel-row { display:flex; gap:var(--space-6); margin-bottom:var(--space-7); }
+    .discover-page .skel-tags { display:flex; gap:var(--space-3); margin-top:var(--space-6); }
+    .skel { position:relative; overflow:hidden; background:rgba(var(--white-rgb),0.06); border-radius:var(--radius-sm); }
+    .skel::after { content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,rgba(var(--white-rgb),0.08),transparent); animation:skel-shimmer 1.4s infinite; }
+    .skel-avatar { width:48px; height:48px; border-radius:var(--radius-lg); flex-shrink:0; }
+    .skel-line { height:10px; margin-bottom:var(--space-4); }
+    .skel-chip { width:64px; height:18px; border-radius:var(--radius-pill); }
+    @keyframes skel-shimmer { 100% { transform:translateX(100%); } }
+    @media (prefers-reduced-motion:reduce) { .skel::after { animation:none; } .discover-page .mentor-card { transition:none; } }
+
+    /* Discover responsive */
+    @media (max-width:560px) {
+      .discover-page .page-title { font-size:var(--fs-5xl); }
+      .discover-page .mentor-grid { grid-template-columns:1fr; gap:var(--space-7); }
+      .discover-page .mentor-card { padding:var(--space-10); }
+      .discover-page .filter-select { flex:1 1 calc(50% - var(--space-3)); min-width:0; }
+      .discover-page .img-filter-tag, .discover-page .clear-btn { flex:1 1 100%; justify-content:center; }
+    }
     .rel-btn { padding:6px 12px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; }
     .rel-btn.primary { background:var(--gold); color:var(--navy); }
     .rel-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--text-dim); }
@@ -2078,7 +2147,7 @@ function EditProfileModal({ profile, saving, error, onSave, onClose }: { profile
   );
 }
 
-function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, profile: any | null) => void; initialResetToken?: string }) {
+function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, profile: any | null, user: any | null) => void; initialResetToken?: string }) {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>(initialResetToken ? 'reset' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -2123,7 +2192,7 @@ function AuthScreen({ onAuth, initialResetToken }: { onAuth: (token: string, pro
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Something went wrong.'); setLoading(false); return; }
       localStorage.setItem('naama_token', data.token);
-      onAuth(data.token, data.profile || null);
+      onAuth(data.token, data.profile || null, data.user || null);
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);
@@ -2399,23 +2468,149 @@ function ChatModal({ conn, myUserId, authToken, onClose }: { conn: any; myUserId
   );
 }
 
-function AdminPanel() {
+// ── Admin dashboard helpers (CSV export, breakdowns, filtering) ───────────────
+type CsvCol = { label: string; get: (r: any) => any };
+
+function csvEscape(v: any): string {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadCSV(filename: string, columns: CsvCol[], rows: any[]) {
+  const header = columns.map(c => csvEscape(c.label)).join(',');
+  const body = rows.map(r => columns.map(c => csvEscape(c.get(r))).join(',')).join('\n');
+  // Prepend a BOM so Excel opens UTF-8 (e.g. accented names) correctly.
+  const csv = '﻿' + header + '\n' + body;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function countBy(rows: any[], keyFn: (r: any) => string | null | undefined): [string, number][] {
+  const m = new Map<string, number>();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (k === null || k === undefined || k === '') continue;
+    const key = String(k);
+    m.set(key, (m.get(key) || 0) + 1);
+  }
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function matchesFilter(obj: any, q: string): boolean {
+  if (!q) return true;
+  const s = q.toLowerCase();
+  return Object.values(obj).some(v => v !== null && v !== undefined && String(v).toLowerCase().includes(s));
+}
+
+function BreakdownCard({ title, rows, max }: { title: string; rows: [string, number][]; max?: number }) {
+  const top = max ? rows.slice(0, max) : rows;
+  const peak = top.length ? top[0][1] : 1;
+  return (
+    <div className="breakdown-card">
+      <div className="breakdown-title">{title}</div>
+      {top.length === 0 ? (
+        <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>No data yet.</div>
+      ) : top.map(([label, n]) => (
+        <div key={label} className="breakdown-row">
+          <div className="breakdown-label" title={label}>{label}</div>
+          <div className="breakdown-bar-wrap"><div className="breakdown-bar" style={{ width: `${Math.max(4, (n / peak) * 100)}%` }} /></div>
+          <div className="breakdown-val">{n}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminPanel({ authToken }: { authToken: string | null }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
+  const [users, setUsers] = useState<any[] | null>(null);
+  const [filter, setFilter] = useState('');
+
+  const categoryLabel = (id: string) => CATEGORIES.find(c => c.id === id)?.label || id || '—';
+
+  // CSV column definitions per section.
+  const MENTOR_COLS: CsvCol[] = [
+    { label: 'Name', get: m => m.name }, { label: 'Role', get: m => m.role },
+    { label: 'Category', get: m => categoryLabel(m.category) }, { label: 'Specialty', get: m => m.specialty },
+    { label: 'Subfield', get: m => m.subfield }, { label: 'Level', get: m => m.level },
+    { label: 'Institution', get: m => m.institution }, { label: 'State', get: m => m.state },
+    { label: 'Intl Graduate', get: m => (m.isIMG ? 'Yes' : 'No') }, { label: 'Years Exp', get: m => m.years },
+    { label: 'Mentees', get: m => m.mentees }, { label: 'Sessions', get: m => m.sessions },
+    { label: 'Match Score', get: m => m.match },
+  ];
+  const USER_COLS: CsvCol[] = [
+    { label: 'Name', get: p => p.name }, { label: 'Role', get: p => p.role },
+    { label: 'Category', get: p => categoryLabel(p.category) }, { label: 'Specialty', get: p => p.specialty },
+    { label: 'Subfield', get: p => p.subfield }, { label: 'Level', get: p => p.level },
+    { label: 'Year', get: p => p.year }, { label: 'State', get: p => p.state },
+    { label: 'Institution', get: p => p.institution }, { label: 'Intl Graduate', get: p => (p.is_img ? 'Yes' : 'No') },
+    { label: 'Joined', get: p => (p.created_at ? new Date(p.created_at).toLocaleDateString() : '') },
+  ];
+  const CONNECTION_COLS: CsvCol[] = [
+    { label: 'User', get: c => c.user_name }, { label: 'Mentor', get: c => c.mentor_name },
+    { label: 'Type', get: c => (c.is_collab ? 'Collaboration' : 'Mentorship') }, { label: 'Status', get: c => c.status },
+    { label: 'Created', get: c => (c.created_at ? new Date(c.created_at).toLocaleDateString() : '') },
+  ];
+  const SESSION_COLS: CsvCol[] = [
+    { label: 'Mentee', get: r => r.mentee }, { label: 'Type', get: r => r.type },
+    { label: 'Date', get: r => r.date }, { label: 'Time', get: r => r.time },
+    { label: 'Note', get: r => r.note }, { label: 'Status', get: r => r.status },
+    { label: 'Requested', get: r => (r.created_at ? new Date(r.created_at).toLocaleDateString() : '') },
+  ];
+  const ACCESS_COLS: CsvCol[] = [
+    { label: 'Email', get: u => u.email }, { label: 'Name', get: u => u.name },
+    { label: 'Role', get: u => u.role }, { label: 'Active', get: u => (u.is_active ? 'Yes' : 'No') },
+    { label: 'Admin', get: u => (u.is_admin ? (u.is_config_admin ? 'Yes (config)' : 'Yes') : 'No') },
+    { label: 'Joined', get: u => (u.created_at ? new Date(u.created_at).toLocaleDateString() : '') },
+  ];
+
+  const authFetch = (url: string, opts: RequestInit = {}) =>
+    fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${authToken}` } });
+
+  const loadUsers = () => {
+    authFetch('/api/admin/users')
+      .then(r => (r.ok ? r.json() : []))
+      .then(u => setUsers(Array.isArray(u) ? u : []))
+      .catch(() => setUsers([]));
+  };
 
   useEffect(() => {
-    fetch('/api/admin/dashboard')
+    authFetch('/api/admin/dashboard')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+    loadUsers();
   }, []);
 
   const refresh = () => {
     setLoading(true);
-    fetch('/api/admin/dashboard')
+    authFetch('/api/admin/dashboard')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); });
+    loadUsers();
+  };
+
+  const setUserAdmin = async (id: number, is_admin: boolean) => {
+    const r = await authFetch(`/api/admin/users/${id}/admin`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_admin }),
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      alert(e.error || 'Failed to update admin status.');
+      return;
+    }
+    loadUsers();
   };
 
   const adminStyles = `
@@ -2442,6 +2637,20 @@ function AdminPanel() {
     .admin-delete { background: none; border: none; color: var(--error); cursor: pointer; font-size: 14px; opacity: 0.5; }
     .admin-delete:hover { opacity: 1; }
     .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .admin-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .admin-search { flex: 1; min-width: 160px; padding: 8px 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 12px; }
+    .admin-search::placeholder { color: var(--text-dim); }
+    .admin-count { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+    .admin-export { padding: 8px 14px; background: transparent; color: var(--gold); border: 1px solid var(--gold); border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .admin-export:hover { background: var(--gold); color: var(--navy); }
+    .breakdown-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+    .breakdown-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+    .breakdown-title { font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 12px; }
+    .breakdown-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .breakdown-label { width: 110px; flex-shrink: 0; font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .breakdown-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 100px; overflow: hidden; }
+    .breakdown-bar { height: 100%; background: linear-gradient(90deg, var(--accent-teal), var(--gold)); border-radius: 100px; }
+    .breakdown-val { width: 32px; text-align: right; font-size: 12px; font-weight: 700; color: var(--white); flex-shrink: 0; }
     @media (max-width: 640px) {
       .admin-wrap { padding: 16px 14px; }
       .admin-header { flex-wrap: wrap; gap: 10px; }
@@ -2458,19 +2667,19 @@ function AdminPanel() {
 
   const deleteMentor = async (id: number) => {
     if (!confirm('Delete this mentor?')) return;
-    await fetch(`/api/mentors/${id}`, { method: 'DELETE' });
+    await authFetch(`/api/mentors/${id}`, { method: 'DELETE' });
     refresh();
   };
 
   const deleteProfile = async (id: number) => {
     if (!confirm('Delete this user profile?')) return;
-    await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
+    await authFetch(`/api/profiles/${id}`, { method: 'DELETE' });
     refresh();
   };
 
   const deleteRequest = async (id: number) => {
     if (!confirm('Delete this request?')) return;
-    await fetch(`/api/schedule-requests/${id}`, { method: 'DELETE' });
+    await authFetch(`/api/schedule-requests/${id}`, { method: 'DELETE' });
     refresh();
   };
 
@@ -2501,29 +2710,60 @@ function AdminPanel() {
       </div>
 
       <div className="admin-tabs">
-        {['overview','mentors','users','connections','sessions'].map(s => (
-          <button key={s} className={`admin-tab${activeSection === s ? ' active' : ''}`} onClick={() => setActiveSection(s)}>
+        {['overview','mentors','users','connections','sessions','access'].map(s => (
+          <button key={s} className={`admin-tab${activeSection === s ? ' active' : ''}`} onClick={() => { setActiveSection(s); setFilter(''); }}>
             {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}
       </div>
 
       {activeSection === 'overview' && (
-        <div style={{ color: 'var(--text-dim)', fontSize: 13, lineHeight: 2 }}>
-          <p>📊 Platform at a glance. Use the tabs above to manage each section.</p>
-          <p>🩺 <strong style={{color:'var(--white)'}}>{data.stats.mentors}</strong> mentors available</p>
-          <p>👥 <strong style={{color:'var(--white)'}}>{data.stats.profiles}</strong> registered users</p>
-          <p>🔗 <strong style={{color:'var(--white)'}}>{data.stats.connections}</strong> mentor connections made</p>
-          <p>📅 <strong style={{color:'var(--white)'}}>{data.stats.requests}</strong> session requests ({data.stats.pending} pending)</p>
+        <div className="breakdown-grid">
+          <BreakdownCard title="Mentors by Field" rows={countBy(data.mentors, (m: any) => categoryLabel(m.category))} />
+          <BreakdownCard title="Mentors by Specialty" rows={countBy(data.mentors, (m: any) => m.specialty)} max={8} />
+          <BreakdownCard title="Mentors by State" rows={countBy(data.mentors, (m: any) => m.state)} max={8} />
+          <BreakdownCard title="Mentors by Level" rows={countBy(data.mentors, (m: any) => m.level)} />
+          <BreakdownCard
+            title="International Graduates"
+            rows={[
+              ['Intl Graduate', data.mentors.filter((m: any) => m.isIMG).length],
+              ['US Graduate', data.mentors.filter((m: any) => !m.isIMG).length],
+            ]}
+          />
+          <BreakdownCard title="Members by Role" rows={countBy(data.profiles, (p: any) => p.role)} />
+          <BreakdownCard title="Connections by Status" rows={countBy(data.connections, (c: any) => c.status)} />
+          <BreakdownCard
+            title="Connection Type"
+            rows={[
+              ['Mentorship', data.connections.filter((c: any) => !c.is_collab).length],
+              ['Collaboration', data.connections.filter((c: any) => c.is_collab).length],
+            ]}
+          />
+          <BreakdownCard title="Sessions by Status" rows={countBy(data.requests, (r: any) => r.status)} />
+          <BreakdownCard
+            title="Member Signups by Month"
+            rows={countBy(data.profiles, (p: any) =>
+              p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : null
+            )}
+            max={12}
+          />
         </div>
       )}
 
-      {activeSection === 'mentors' && (
-        <div style={{ overflowX: 'auto' }}>
+      {activeSection === 'mentors' && (() => {
+        const rows = data.mentors.filter((m: any) => matchesFilter(m, filter));
+        return (
+        <div>
+          <div className="admin-toolbar">
+            <input className="admin-search" placeholder="Filter mentors…" value={filter} onChange={e => setFilter(e.target.value)} />
+            <span className="admin-count">{rows.length} of {data.mentors.length}</span>
+            <button className="admin-export" onClick={() => downloadCSV('mentors.csv', MENTOR_COLS, rows)}>⬇ Export CSV</button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
           <table className="admin-table">
             <thead><tr><th>Name</th><th>Specialty</th><th>Institution</th><th>State</th><th>Level</th><th>International Graduate</th><th>Mentees</th><th></th></tr></thead>
             <tbody>
-              {data.mentors.map((m: any) => (
+              {rows.map((m: any) => (
                 <tr key={m.id}>
                   <td style={{ color: 'var(--white)', fontWeight: 600 }}>{m.name}</td>
                   <td>{m.specialty}</td>
@@ -2537,15 +2777,25 @@ function AdminPanel() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
-      )}
+        );
+      })()}
 
-      {activeSection === 'users' && (
-        <div style={{ overflowX: 'auto' }}>
+      {activeSection === 'users' && (() => {
+        const rows = data.profiles.filter((p: any) => matchesFilter(p, filter));
+        return (
+        <div>
+          <div className="admin-toolbar">
+            <input className="admin-search" placeholder="Filter members…" value={filter} onChange={e => setFilter(e.target.value)} />
+            <span className="admin-count">{rows.length} of {data.profiles.length}</span>
+            <button className="admin-export" onClick={() => downloadCSV('members.csv', USER_COLS, rows)}>⬇ Export CSV</button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
           <table className="admin-table">
             <thead><tr><th>Name</th><th>Role</th><th>Field</th><th>Specialty</th><th>Level</th><th>State</th><th>Joined</th><th></th></tr></thead>
             <tbody>
-              {data.profiles.map((p: any) => (
+              {rows.map((p: any) => (
                 <tr key={p.id}>
                   <td style={{ color: 'var(--white)', fontWeight: 600 }}>{p.name}</td>
                   <td>{p.role}</td>
@@ -2559,33 +2809,54 @@ function AdminPanel() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
-      )}
+        );
+      })()}
 
-      {activeSection === 'connections' && (
-        <div style={{ overflowX: 'auto' }}>
+      {activeSection === 'connections' && (() => {
+        const rows = data.connections.filter((c: any) => matchesFilter(c, filter));
+        return (
+        <div>
+          <div className="admin-toolbar">
+            <input className="admin-search" placeholder="Filter connections…" value={filter} onChange={e => setFilter(e.target.value)} />
+            <span className="admin-count">{rows.length} of {data.connections.length}</span>
+            <button className="admin-export" onClick={() => downloadCSV('connections.csv', CONNECTION_COLS, rows)}>⬇ Export CSV</button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
           <table className="admin-table">
-            <thead><tr><th>User</th><th>Mentor</th><th>Status</th><th>Date</th></tr></thead>
+            <thead><tr><th>User</th><th>Mentor</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
             <tbody>
-              {data.connections.map((c: any) => (
+              {rows.map((c: any) => (
                 <tr key={c.id}>
                   <td style={{ color: 'var(--white)' }}>{c.user_name || '—'}</td>
                   <td>{c.mentor_name || '—'}</td>
+                  <td>{c.is_collab ? 'Collaboration' : 'Mentorship'}</td>
                   <td><span className={`admin-badge badge-${c.status}`}>{c.status}</span></td>
                   <td>{new Date(c.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
-      )}
+        );
+      })()}
 
-      {activeSection === 'sessions' && (
-        <div style={{ overflowX: 'auto' }}>
+      {activeSection === 'sessions' && (() => {
+        const rows = data.requests.filter((r: any) => matchesFilter(r, filter));
+        return (
+        <div>
+          <div className="admin-toolbar">
+            <input className="admin-search" placeholder="Filter sessions…" value={filter} onChange={e => setFilter(e.target.value)} />
+            <span className="admin-count">{rows.length} of {data.requests.length}</span>
+            <button className="admin-export" onClick={() => downloadCSV('sessions.csv', SESSION_COLS, rows)}>⬇ Export CSV</button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
           <table className="admin-table">
             <thead><tr><th>Mentee</th><th>Type</th><th>Date</th><th>Time</th><th>Note</th><th>Status</th><th>Requested</th><th></th></tr></thead>
             <tbody>
-              {data.requests.map((r: any) => (
+              {rows.map((r: any) => (
                 <tr key={r.id}>
                   <td style={{ color: 'var(--white)', fontWeight: 600 }}>{r.mentee}</td>
                   <td>{r.type}</td>
@@ -2599,8 +2870,60 @@ function AdminPanel() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
-      )}
+        );
+      })()}
+
+      {activeSection === 'access' && (() => {
+        const list = (users || []).filter((u: any) => matchesFilter(u, filter));
+        return (
+        <div>
+          <p style={{ color: 'var(--text-dim)', fontSize: 12, lineHeight: 1.7, marginBottom: 14 }}>
+            Grant or revoke admin access. Admins can view this dashboard and manage all data.
+          </p>
+          <div className="admin-toolbar">
+            <input className="admin-search" placeholder="Filter by email or name…" value={filter} onChange={e => setFilter(e.target.value)} />
+            <span className="admin-count">{list.length} of {(users || []).length}</span>
+            <button className="admin-export" onClick={() => downloadCSV('accounts.csv', ACCESS_COLS, list)}>⬇ Export CSV</button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+          <table className="admin-table">
+            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th>Admin</th><th></th></tr></thead>
+            <tbody>
+              {list.map((u: any) => (
+                <tr key={u.id}>
+                  <td style={{ color: 'var(--white)', fontWeight: 600 }}>
+                    {u.email}{u.is_self ? ' (you)' : ''}
+                  </td>
+                  <td>{u.name || '—'}</td>
+                  <td>{u.role || '—'}</td>
+                  <td>{u.is_active ? '✓' : '—'}</td>
+                  <td>
+                    {u.is_admin
+                      ? <span className="admin-badge badge-confirmed">{u.is_config_admin ? 'Admin (config)' : 'Admin'}</span>
+                      : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                  </td>
+                  <td>
+                    {u.is_self || u.is_config_admin ? (
+                      <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{u.is_config_admin ? 'Locked' : '—'}</span>
+                    ) : u.is_admin ? (
+                      <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11 }} onClick={() => setUserAdmin(u.id, false)}>Revoke</button>
+                    ) : (
+                      <button className="rel-btn primary" style={{ fontSize: 11 }} onClick={() => setUserAdmin(u.id, true)}>Make admin</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {list.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 20 }}>No users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2622,6 +2945,26 @@ function menteeProfileFromConn(conn: any) {
     bio: conn.mentee_bio,
     category: conn.mentee_category,
     tags: conn.mentee_tags || [],
+  };
+}
+
+function mentorProfileFromConn(conn: any) {
+  return {
+    name: conn.mentor_name || 'Mentor',
+    initials: conn.mentor_initials || '?',
+    photo: conn.mentor_photo || '',
+    avatarGrad: conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)',
+    isIMG: conn.mentor_is_img,
+    role: conn.mentor_role,
+    level: conn.mentor_level,
+    subfield: conn.mentor_subfield,
+    specialty: conn.mentor_specialty,
+    specialties: conn.mentor_specialties,
+    institution: conn.mentor_institution,
+    state: conn.mentor_state,
+    bio: conn.mentor_bio,
+    category: conn.mentor_category,
+    tags: conn.mentor_tags || [],
   };
 }
 
@@ -2688,6 +3031,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [activeMode, setActiveMode] = useState<'mentor' | 'mentee'>('mentee');
   const [tab, setTab] = useState('discover');
   const [requested, setRequested] = useState(new Set<number>());
@@ -2695,7 +3039,7 @@ export default function App() {
   const [chatConn, setChatConn] = useState<any | null>(null);
   const [menteeConnTab, setMenteeConnTab] = useState<'active' | 'declined'>('active');
   const [selectedMentor, setSelectedMentor] = useState<any>(null);
-  const [selectedMentee, setSelectedMentee] = useState<any>(null);
+  const [previewProfile, setPreviewProfile] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [toastMsg, setToastMsg] = useState('');
   const [query, setQuery] = useState('');
@@ -2705,6 +3049,7 @@ export default function App() {
   const [stateFilter, setStateFilter] = useState('');
   const [imgOnly, setImgOnly] = useState(false);
   const [mentors, setMentors] = useState<any[]>([DANA]);
+  const [mentorsLoading, setMentorsLoading] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -2732,6 +3077,7 @@ export default function App() {
           setAuthToken(token);
           setUserId(data.user.id);
           setIsActive(data.user.is_active !== false);
+          setIsAdmin(!!data.user.is_admin);
           if (data.user.profile_id) setProfileId(data.user.profile_id);
           if (data.profile) {
             const p = data.profile;
@@ -2755,10 +3101,12 @@ export default function App() {
   }, []);
 
   const loadMentors = () => {
+    setMentorsLoading(true);
     fetch('/api/mentors')
       .then(r => r.json())
       .then(data => { if (Array.isArray(data) && data.length > 0) setMentors(data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setMentorsLoading(false));
   };
 
   useEffect(() => {
@@ -2898,6 +3246,7 @@ export default function App() {
     setProfile(null);
     setRequested(new Set());
     setRequests([]);
+    setIsAdmin(false);
     setTab('discover');
   };
 
@@ -2905,8 +3254,6 @@ export default function App() {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
   };
-
-  const isAdmin = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('admin');
 
   if (!authChecked) return (
     <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -2920,10 +3267,11 @@ export default function App() {
       <style>{styles}</style>
       <AuthScreen
         initialResetToken={new URLSearchParams(window.location.search).get('reset_token') || undefined}
-        onAuth={(token, savedProfile) => {
+        onAuth={(token, savedProfile, authUser) => {
         setAuthToken(token);
         const decoded: any = JSON.parse(atob(token.split('.')[1]));
         setUserId(decoded.userId);
+        setIsAdmin(!!authUser?.is_admin);
         if (savedProfile) {
           setProfileId(savedProfile.id);
           setProfile({
@@ -3120,7 +3468,8 @@ export default function App() {
       </nav>
 
       {tab === 'discover' && (
-        <div className="page">
+        <div className="page discover-page">
+          <div className="discover-eyebrow">NAAMA · Mentor Directory</div>
           <div className="page-title">
             Find your <span>mentor</span>.
           </div>
@@ -3150,10 +3499,31 @@ export default function App() {
             }}
           />
           <div className="results-count">
-            {filteredMentors.length} mentor
-            {filteredMentors.length !== 1 ? 's' : ''} found
+            {mentorsLoading
+              ? 'Loading mentors…'
+              : `${filteredMentors.length} mentor${filteredMentors.length !== 1 ? 's' : ''} found`}
           </div>
-          {filteredMentors.length === 0 ? (
+          {mentorsLoading ? (
+            <div className="mentor-grid" aria-busy="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="skel-card">
+                  <div className="skel-row">
+                    <div className="skel skel-avatar" />
+                    <div style={{ flex: 1 }}>
+                      <div className="skel skel-line" style={{ width: '60%' }} />
+                      <div className="skel skel-line" style={{ width: '40%' }} />
+                    </div>
+                  </div>
+                  <div className="skel skel-line" style={{ width: '100%' }} />
+                  <div className="skel skel-line" style={{ width: '80%' }} />
+                  <div className="skel-tags">
+                    <div className="skel skel-chip" />
+                    <div className="skel skel-chip" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredMentors.length === 0 ? (
             <div className="empty">
               <div className="empty-icon">🔍</div>
               <div className="empty-title">No mentors found</div>
@@ -3303,10 +3673,10 @@ export default function App() {
                         <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                       )}
                       <div
-                        className={isSent ? undefined : 'rel-clickable'}
-                        title={isSent ? undefined : 'View profile'}
-                        onClick={isSent ? undefined : () => setSelectedMentee(menteeProfileFromConn(conn))}
-                        style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: isSent ? 'default' : 'pointer' }}
+                        className="rel-clickable"
+                        title="View profile"
+                        onClick={() => setPreviewProfile(isSent ? mentorProfileFromConn(conn) : menteeProfileFromConn(conn))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}
                       >
                         <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -3375,11 +3745,13 @@ export default function App() {
                 const sentLabel = conn.is_collab ? 'Collaboration request' : 'Mentorship request';
                 return (
                   <div key={conn.id} className="rel-card">
-                    <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
-                    <div style={{ flex: 1 }}>
-                      <div className="rel-name">{displayName}</div>
-                      {displaySpecialty && <div className="rel-role">{displaySpecialty}</div>}
-                      <div className="rel-last" style={{ color: 'var(--gold)' }}>⏳ {sentLabel} pending</div>
+                    <div className="rel-clickable" title="View profile" onClick={() => setPreviewProfile(isSentByMe ? mentorProfileFromConn(conn) : menteeProfileFromConn(conn))} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                      <Avatar photo={displayPhoto} initials={displayInitials} grad={displayGrad} size={44} radius={11} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="rel-name">{displayName}</div>
+                        {displaySpecialty && <div className="rel-role">{displaySpecialty}</div>}
+                        <div className="rel-last" style={{ color: 'var(--gold)' }}>⏳ {sentLabel} pending</div>
+                      </div>
                     </div>
                     <div className="rel-actions">
                       <button
@@ -3434,7 +3806,7 @@ export default function App() {
                     {conn.status === 'accepted' && (
                       <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                     )}
-                    <div className="rel-clickable" title="View profile" onClick={() => setSelectedMentee(menteeProfileFromConn(conn))} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                    <div className="rel-clickable" title="View profile" onClick={() => setPreviewProfile(menteeProfileFromConn(conn))} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}>
                       <Avatar photo={conn.mentee_photo || ''} initials={conn.mentee_initials || '?'} grad="linear-gradient(135deg,#4a9b8e,#2d6a62)" size={44} radius={11} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="rel-name">{conn.mentee_name || 'Mentee'}</div>
@@ -3493,18 +3865,20 @@ export default function App() {
                           {conn.status === 'accepted' && (
                             <button className="rel-btn secondary" style={{ borderColor: 'var(--error)', color: 'var(--error)', fontSize: 11, flexShrink: 0 }} onClick={() => handleDeleteConnection(conn.id, 'Cancel match')}>Unmatch</button>
                           )}
-                          <Avatar
-                            photo={conn.mentor_photo || ''}
-                            initials={conn.mentor_initials || '?'}
-                            grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
-                            size={44}
-                            radius={11}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div className="rel-name">{conn.mentor_name}</div>
-                            <div className="rel-role">{conn.mentor_specialty}</div>
-                            <div className="rel-last" style={{ color: !conn.mentor_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
-                              {!conn.mentor_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : '⏳ Awaiting acceptance'}
+                          <div className="rel-clickable" title="View profile" onClick={() => setPreviewProfile(mentorProfileFromConn(conn))} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                            <Avatar
+                              photo={conn.mentor_photo || ''}
+                              initials={conn.mentor_initials || '?'}
+                              grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
+                              size={44}
+                              radius={11}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="rel-name">{conn.mentor_name}</div>
+                              <div className="rel-role">{conn.mentor_specialty}</div>
+                              <div className="rel-last" style={{ color: !conn.mentor_is_active ? 'var(--text-dim)' : conn.status === 'accepted' ? 'var(--accent-teal)' : 'var(--gold)' }}>
+                                {!conn.mentor_is_active ? '⚫ Account deactivated' : conn.status === 'accepted' ? '● Connected' : '⏳ Awaiting acceptance'}
+                              </div>
                             </div>
                           </div>
                           <div className="rel-actions">
@@ -3532,17 +3906,19 @@ export default function App() {
                     <div className="rel-list">
                       {declinedConns.map((conn: any) => (
                         <div key={conn.id} className="rel-card" style={{ opacity: 0.65 }}>
-                          <Avatar
-                            photo={conn.mentor_photo || ''}
-                            initials={conn.mentor_initials || '?'}
-                            grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
-                            size={44}
-                            radius={11}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div className="rel-name">{conn.mentor_name}</div>
-                            <div className="rel-role">{conn.mentor_specialty}</div>
-                            <div className="rel-last" style={{ color: 'var(--error)' }}>✕ Declined</div>
+                          <div className="rel-clickable" title="View profile" onClick={() => setPreviewProfile(mentorProfileFromConn(conn))} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                            <Avatar
+                              photo={conn.mentor_photo || ''}
+                              initials={conn.mentor_initials || '?'}
+                              grad={conn.mentor_avatar_grad || 'linear-gradient(135deg,#c9a84c,#4a9b8e)'}
+                              size={44}
+                              radius={11}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="rel-name">{conn.mentor_name}</div>
+                              <div className="rel-role">{conn.mentor_specialty}</div>
+                              <div className="rel-last" style={{ color: 'var(--error)' }}>✕ Declined</div>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -4027,11 +4403,11 @@ export default function App() {
         </div>
       )}
 
-      {selectedMentee && (
-        <ProfileSummaryModal profile={selectedMentee} onClose={() => setSelectedMentee(null)} />
+      {previewProfile && (
+        <ProfileSummaryModal profile={previewProfile} onClose={() => setPreviewProfile(null)} />
       )}
 
-      {tab === 'admin' && isAdmin && <AdminPanel />}
+      {tab === 'admin' && isAdmin && <AdminPanel authToken={authToken} />}
 
       {showNotifications && (
         <>

@@ -1,0 +1,178 @@
+/*
+ * NAAMA — Foundational styles · Direction 1 "The Almanac"
+ *
+ * Editorial / institutional voice: serif headlines, generous whitespace, gold
+ * used only as hairlines / eyebrows / wordmark, teal reserved as a SEMANTIC
+ * "matched / connected" accent. Every color, size, space, and radius is a token
+ * from src/tokens.css — no new values are introduced here.
+ *
+ * This file is the reusable system (type, color usage, spacing, buttons, inputs,
+ * one card). Load src/tokens.css first.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ===== Base ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+.foundation {
+  margin: 0;
+  background: var(--navy);
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: rgba(var(--gold-overlay-rgb), 0.25); color: var(--white); }
+
+/* ===== Typography ===== */
+/* Display & headings — Playfair Display, used large and sparingly */
+.t-display {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-7xl);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--white);
+}
+.t-h1 { font-family: var(--font-serif); font-weight: var(--fw-bold); font-size: var(--fs-5xl); line-height: 1.2; color: var(--white); }
+.t-h2 { font-family: var(--font-serif); font-weight: var(--fw-semibold); font-size: var(--fs-4xl); line-height: 1.25; color: var(--white); }
+.t-h3 { font-family: var(--font-serif); font-weight: var(--fw-semibold); font-size: var(--fs-2xl); line-height: 1.3; color: var(--white); }
+.t-title { font-family: var(--font-serif); font-weight: var(--fw-semibold); font-size: var(--fs-lg); line-height: 1.3; color: var(--white); }
+
+/* Body — DM Sans */
+.t-lead { font-size: var(--fs-lg); line-height: 1.6; color: var(--text-dim); }
+.t-body { font-size: var(--fs-md); line-height: 1.65; color: var(--text-dim); }
+.t-small { font-size: var(--fs-sm); line-height: 1.5; color: var(--text-dim); }
+
+/* Eyebrow / label — DM Mono, the structural device of this direction */
+.t-eyebrow {
+  font-family: var(--font-mono, 'DM Mono', monospace);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.t-mono { font-family: 'DM Mono', monospace; font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* Gold hairline — the only role gold plays as a "rule" */
+.rule { border: 0; border-top: 1px solid var(--border); margin: 0; }
+
+/* Wordmark */
+.wordmark {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-4xl);
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+.wordmark span { color: var(--white); }
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-md);
+  line-height: 1;
+  padding: var(--space-5) var(--space-10);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Primary — the ONE place this direction spends a solid gold fill */
+.btn-primary { background: var(--gold); color: var(--navy); }
+.btn-primary:hover:not(:disabled) { background: var(--gold-light); }
+
+/* Secondary — gold hairline, the restrained default */
+.btn-secondary { background: transparent; border-color: var(--border); color: var(--gold); }
+.btn-secondary:hover:not(:disabled) { background: rgba(var(--gold-overlay-rgb), 0.08); border-color: var(--gold); }
+
+/* Ghost — quiet text action */
+.btn-ghost { background: transparent; color: var(--text-dim); }
+.btn-ghost:hover:not(:disabled) { color: var(--white); }
+
+/* ===== Form inputs ===== */
+.field { display: flex; flex-direction: column; gap: var(--space-3); }
+.field-label {
+  font-family: 'DM Mono', monospace;
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.input, .select, .textarea {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  color: var(--white);
+  background: rgba(var(--white-rgb), 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-7);
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.textarea { resize: vertical; min-height: 96px; line-height: 1.6; }
+.input::placeholder, .textarea::placeholder { color: var(--text-dim); }
+.input:focus, .select:focus, .textarea:focus { border-color: var(--gold); background: rgba(var(--white-rgb), 0.07); }
+.select { appearance: none; cursor: pointer; }
+.select option { background: var(--navy-mid); color: var(--white); }
+.field-hint { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* ===== Card — one component: an editorial member card ("the pairing") ===== */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-12);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.card:hover { border-color: rgba(var(--gold-overlay-rgb), 0.5); background: rgba(var(--white-rgb), 0.09); }
+.card-eyebrow { /* DM Mono gold, e.g. "MENTOR · CARDIOLOGY" */
+  font-family: 'DM Mono', monospace;
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.card-name { font-family: var(--font-serif); font-weight: var(--fw-semibold); font-size: var(--fs-3xl); color: var(--white); margin: var(--space-3) 0 0; }
+.card-meta { font-size: var(--fs-md); color: var(--text-dim); margin: var(--space-2) 0 0; }
+.card-divider { border: 0; border-top: 1px solid var(--border); margin: var(--space-8) 0; }
+.card-body { font-size: var(--fs-md); line-height: 1.65; color: var(--text-dim); }
+.card-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); margin-top: var(--space-8); flex-wrap: wrap; }
+
+/* Teal status chip — the SEMANTIC "matched / connected" accent, used nowhere else */
+.chip-matched {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.02em;
+  color: var(--accent-teal);
+  background: rgba(var(--teal-overlay-rgb), 0.15);
+  border: 1px solid rgba(var(--teal-overlay-rgb), 0.3);
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-pill);
+}
+.chip-matched::before { content: ""; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--accent-teal); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

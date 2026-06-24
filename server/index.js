@@ -16,6 +16,14 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 5000) 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = process.env.JWT_SECRET || 'naama-connect-secret-key-2025';
 
+// Bootstrap superadmins: any email listed here is always treated as an admin
+// (and is granted the DB flag on startup), so there's no way to lock everyone
+// out. Other admins are managed at runtime via the users.is_admin flag.
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+);
+const isAdminUser = (row) => !!row && (row.is_admin === true || ADMIN_EMAILS.has((row.email || '').toLowerCase()));
+
 
 const SMTP_USER = (process.env.SMTP_USER || 'naamamentorconnect@gmail.com').trim();
 const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s/g, '');
@@ -91,6 +99,25 @@ function optionalAuth(req, res, next) {
   next();
 }
 
+// Requires a valid token AND that the user is an admin (DB flag or ADMIN_EMAILS).
+async function adminMiddleware(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header) return res.status(401).json({ error: 'No token' });
+  try {
+    req.user = jwt.verify(header.replace('Bearer ', ''), JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  try {
+    const { rows } = await pool.query('SELECT id, email, is_admin FROM users WHERE id = $1', [req.user.userId]);
+    if (!rows.length) return res.status(401).json({ error: 'User not found' });
+    if (!isAdminUser(rows[0])) return res.status(403).json({ error: 'Admin access required' });
+    next();
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 
 app.post('/api/auth/signup', async (req, res) => {
@@ -150,7 +177,7 @@ app.post('/api/auth/login', async (req, res) => {
       const p = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [user.profile_id]);
       profile = p.rows[0] || null;
     }
-    res.json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id, is_active: user.is_active !== false }, profile });
+    res.json({ token, user: { id: user.id, email: user.email, profile_id: user.profile_id, is_active: user.is_active !== false, is_admin: isAdminUser(user) }, profile });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -158,10 +185,11 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, email, profile_id, is_active, created_at FROM users WHERE id = $1', [req.user.userId]);
+    const { rows } = await pool.query('SELECT id, email, profile_id, is_active, is_admin, created_at FROM users WHERE id = $1', [req.user.userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
     const user = rows[0];
     user.is_active = user.is_active !== false;
+    user.is_admin = isAdminUser(user);
     let profile = null;
     if (user.profile_id) {
       const p = await pool.query('SELECT * FROM user_profiles WHERE id = $1', [user.profile_id]);
@@ -358,7 +386,7 @@ app.put('/api/mentors/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/mentors/:id', async (req, res) => {
+app.delete('/api/mentors/:id', adminMiddleware, async (req, res) => {
   try {
     await pool.query('DELETE FROM mentors WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -443,7 +471,7 @@ app.put('/api/profiles/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/profiles/:id', async (req, res) => {
+app.delete('/api/profiles/:id', adminMiddleware, async (req, res) => {
   try {
     const id = req.params.id;
     // Cascade: remove dependent rows before deleting the profile
@@ -505,6 +533,9 @@ app.get('/api/connections/mine', authMiddleware, async (req, res) => {
       m.name as mentor_name, m.specialty as mentor_specialty, m.institution as mentor_institution,
       m.avatar_grad as mentor_avatar_grad, m.photo as mentor_photo, m.initials as mentor_initials,
       m.linked_user_id as mentor_linked_user_id,
+      m.role as mentor_role, m.level as mentor_level, m.subfield as mentor_subfield,
+      m.category as mentor_category, m.state as mentor_state, m.bio as mentor_bio,
+      m.tags as mentor_tags, m.specialties as mentor_specialties, m.is_img as mentor_is_img,
       COALESCE(m.is_active, true) as mentor_is_active,
       up.name as mentee_name, up.initials as mentee_initials, up.photo as mentee_photo,
       up.role as mentee_role, up.category as mentee_category, up.specialty as mentee_specialty,
@@ -841,7 +872,7 @@ app.put('/api/schedule-requests/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/schedule-requests/:id', async (req, res) => {
+app.delete('/api/schedule-requests/:id', adminMiddleware, async (req, res) => {
   try {
     await pool.query('DELETE FROM schedule_requests WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -853,7 +884,54 @@ app.delete('/api/schedule-requests/:id', async (req, res) => {
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 
 
-app.get('/api/admin/dashboard', async (req, res) => {
+// List user accounts with their admin/active status for the access-management UI.
+app.get('/api/admin/users', adminMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, u.email, u.is_admin, u.is_active, u.created_at,
+              up.name as profile_name, up.role as profile_role
+       FROM users u
+       LEFT JOIN user_profiles up ON up.id = u.profile_id
+       ORDER BY u.created_at DESC`
+    );
+    res.json(rows.map(r => ({
+      id: r.id,
+      email: r.email,
+      name: r.profile_name || null,
+      role: r.profile_role || null,
+      is_active: r.is_active !== false,
+      is_admin: isAdminUser(r),
+      // Config admins (ADMIN_EMAILS) can't be toggled off from the UI.
+      is_config_admin: ADMIN_EMAILS.has((r.email || '').toLowerCase()),
+      is_self: r.id === req.user.userId,
+      created_at: r.created_at,
+    })));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Grant or revoke admin for another user.
+app.put('/api/admin/users/:id/admin', adminMiddleware, async (req, res) => {
+  try {
+    const targetId = Number(req.params.id);
+    const grant = req.body.is_admin === true;
+    if (targetId === req.user.userId) {
+      return res.status(400).json({ error: "You can't change your own admin status." });
+    }
+    const { rows } = await pool.query('SELECT email FROM users WHERE id = $1', [targetId]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    if (ADMIN_EMAILS.has((rows[0].email || '').toLowerCase())) {
+      return res.status(400).json({ error: 'This user is a configured admin and cannot be changed here.' });
+    }
+    await pool.query('UPDATE users SET is_admin = $1 WHERE id = $2', [grant, targetId]);
+    res.json({ success: true, id: targetId, is_admin: grant });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/dashboard', adminMiddleware, async (req, res) => {
   try {
     const [mentors, profiles, connections, requests] = await Promise.all([
       pool.query('SELECT * FROM mentors ORDER BY created_at DESC'),
@@ -942,6 +1020,11 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE connections ADD COLUMN IF NOT EXISTS is_collab BOOLEAN DEFAULT false`);
     await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT '{}'`);
     await pool.query(`ALTER TABLE mentors ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT '{}'`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false`);
+    // Bootstrap: ensure every configured ADMIN_EMAILS account has the admin flag.
+    if (ADMIN_EMAILS.size) {
+      await pool.query(`UPDATE users SET is_admin = true WHERE LOWER(email) = ANY($1::text[])`, [[...ADMIN_EMAILS]]);
+    }
     await pool.query(`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
         id SERIAL PRIMARY KEY,

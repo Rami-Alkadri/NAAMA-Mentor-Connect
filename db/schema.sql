@@ -12,6 +12,7 @@ Ok -- ==========================================================================
 -- Columns added by runMigrations() ALTER statements are folded into the base
 -- CREATE TABLE here so a fresh database matches a fully-migrated one:
 --   users.is_active            (boolean default true)
+--   users.is_admin             (boolean default false)
 --   mentors.is_active          (boolean default true)
 --   user_profiles.year_set_date(DATE default CURRENT_DATE)
 --   mentors.year_set_date      (DATE default CURRENT_DATE)
@@ -42,6 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,                 -- bcrypt hash
   profile_id    INTEGER,                       -- FK -> user_profiles(id), added below
   is_active     BOOLEAN DEFAULT TRUE,          -- from ALTER in runMigrations()
+  is_admin      BOOLEAN DEFAULT FALSE,         -- from ALTER in runMigrations(); admin dashboard access
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
