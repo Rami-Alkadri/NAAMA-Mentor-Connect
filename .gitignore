@@ -17,4 +17,7 @@ npm-debug.log*
 # OS / editor cruft
 .DS_Store
 
+# Local tooling artifacts (screenshots, traces)
+.playwright-mcp/
+
 CLAUDE.md
