@@ -46,5 +46,14 @@ deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
+[userenv]
+
+[userenv.shared]
+ADMIN_EMAILS = "rami.alkadri@gmail.com,dana.alkhaled@gmail.com"
+SMTP_USER = "naamamentorconnect@gmail.com"
+VAPID_EMAIL = "mailto:naamamentorconnect@gmail.com"
+VAPID_PRIVATE_KEY = "it80ozYeI6Rh8Jmg_SSQ0ECJaudFVeQc4b_9WCuqOyQ"
+VAPID_PUBLIC_KEY = "BBcqHDfVgVbqGcuKJ2YPFW4HO5zlNwOEt_7H6v5cM5g7s__AiNFCYHklS5zcFmT3nPZHvlLa3EPSTNwWPW5d-3o"
+
 # NOTE: VAPID/SMTP values were removed from here (this file is committed to a
 # public repo). They now live in Replit Secrets instead. Do not re-add secrets here.
