@@ -1049,7 +1049,13 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false`);
     // Bootstrap: ensure every configured ADMIN_EMAILS account has the admin flag.
     if (ADMIN_EMAILS.size) {
-      await pool.query(`UPDATE users SET is_admin = true WHERE LOWER(email) = ANY($1::text[])`, [[...ADMIN_EMAILS]]);
+      const r = await pool.query(`UPDATE users SET is_admin = true WHERE LOWER(email) = ANY($1::text[])`, [[...ADMIN_EMAILS]]);
+      console.log(`[ADMIN] ADMIN_EMAILS=[${[...ADMIN_EMAILS].join(', ')}] — matched & granted admin to ${r.rowCount} existing account(s).`);
+      if (r.rowCount === 0) {
+        console.log('[ADMIN] No existing account matched ADMIN_EMAILS yet. Admin still works on login via email match — just log in with that exact email.');
+      }
+    } else {
+      console.log('[ADMIN] ⚠ No ADMIN_EMAILS configured in this environment — nobody will be an admin. Set ADMIN_EMAILS in Secrets and restart.');
     }
     await pool.query(`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
