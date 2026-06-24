@@ -10,6 +10,7 @@
 //   node server/dailyDigest.js            -> sends emails
 //   node server/dailyDigest.js --dry-run  -> prints what would be sent, sends nothing
 
+import 'dotenv/config';
 import pg from 'pg';
 import nodemailer from 'nodemailer';
 
