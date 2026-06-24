@@ -1613,7 +1613,7 @@ function ScheduleTab({
                   </div>
                 </div>
               )}
-              {r.status === 'pending' && (
+              {r.status === 'pending' && reschedulingId !== r.id && (
                 <div className="request-actions">
                   <button
                     className="confirm-btn"
@@ -1632,6 +1632,12 @@ function ScheduleTab({
                     }}
                   >
                     ✓ Confirm
+                  </button>
+                  <button
+                    className="reschedule-btn"
+                    onClick={() => { setReschedulingId(r.id); setRsType(''); setRsDay(null); setRsTime(''); }}
+                  >
+                    ↺ Reschedule
                   </button>
                   <button
                     className="decline-btn"
