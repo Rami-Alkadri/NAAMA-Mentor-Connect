@@ -734,19 +734,45 @@ app.get('/api/messages/conversations', authMiddleware, async (req, res) => {
 
 // ── SCHEDULE REQUESTS ─────────────────────────────────────────────────────────
 
-app.post('/api/schedule-requests', async (req, res) => {
+app.post('/api/schedule-requests', optionalAuth, async (req, res) => {
   try {
     const r = req.body;
+    const mentorUserId = Number(r.mentor_user_id) || null;
+    if (!mentorUserId) {
+      return res.status(400).json({ error: 'A mentor is required to schedule a session.' });
+    }
+
+    // A mentee may only schedule with a mentor they have an ACCEPTED mentorship
+    // connection with. This is the source of truth that closes the "schedule
+    // without a mentor" hole regardless of what the UI sends. Mentee identity is
+    // taken from the auth token when present, otherwise the posted profile id.
+    const menteeUserId = req.user?.userId || null;
+    const menteeProfileId = r.user_profile_id || null;
+    if (!menteeUserId && !menteeProfileId) {
+      return res.status(400).json({ error: 'Mentee identity is required.' });
+    }
+    const { rows: rel } = await pool.query(
+      `SELECT 1 FROM connections c
+       JOIN mentors m ON m.id = c.mentor_id
+       WHERE c.status = 'accepted' AND c.is_collab = false
+         AND m.linked_user_id = $1
+         AND (($2::int IS NOT NULL AND c.user_id = $2)
+           OR ($3::int IS NOT NULL AND c.user_profile_id = $3))
+       LIMIT 1`,
+      [mentorUserId, menteeUserId, menteeProfileId]
+    );
+    if (!rel.length) {
+      return res.status(403).json({ error: "You can only schedule a session with a mentor you're connected with." });
+    }
+
     const { rows } = await pool.query(
       `INSERT INTO schedule_requests (mentee_name, mentee_initials, mentee_photo, user_profile_id, meeting_type, meeting_date, meeting_time, note, mentor_user_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [r.mentee, r.menteeInitials, r.menteePhoto || '', r.user_profile_id || null, r.type, r.date, r.time, r.note || '', r.mentor_user_id || null]
+      [r.mentee, r.menteeInitials, r.menteePhoto || '', r.user_profile_id || null, r.type, r.date, r.time, r.note || '', mentorUserId]
     );
     res.status(201).json(rows[0]);
 
-    if (r.mentor_user_id) {
-      sendPushNotification(r.mentor_user_id, 'New Session Request', `${r.mentee} has requested a session with you.`).catch(() => {});
-    }
+    sendPushNotification(mentorUserId, 'New Session Request', `${r.mentee} has requested a session with you.`).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
